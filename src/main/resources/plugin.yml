@@ -1,0 +1,11 @@
+name: RubiksUHC
+version: ${project.version}
+main: me.qther.rubiksuhc.RubiksUHC
+api-version: 1.13
+load: STARTUP
+authors: [Qther]
+description: Made for Rubik's Craft SMP.
+commands:
+  ruhc:
+    description: Opens a menu for RubiksUHC.
+    usage: /ruhc
