@@ -160,6 +160,7 @@ public final class RubiksUHC extends JavaPlugin implements Listener {
         WorldBorder border = world.getWorldBorder();
         border.setCenter(0.5, 0.5);
         if (borderTime > 0) border.setSize(2 * borderSize, borderTime);
+        else border.setSize(2 * borderSize);
         border.setDamageAmount(2);
         if (borderTime > 0) Bukkit.broadcastMessage("The border has started to shrink from a size of" + borderSize * 2 + "square blocks towards x0 z0.");
         else Bukkit.broadcastMessage("The border has been created with a size of " + borderSize * 2 + "square blocks.");
