@@ -1,6 +1,9 @@
 package me.qther.rubiksuhc;
 
 import org.bukkit.*;
+import org.bukkit.configuration.InvalidConfigurationException;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -8,6 +11,7 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.inventory.ClickType;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -33,15 +37,36 @@ public final class RubiksUHC extends JavaPlugin implements Listener {
     public static List<Player> scattered = new ArrayList<>(Arrays.asList());
     public static List<Player> dead = new ArrayList<>(Arrays.asList());
 
+    public static String overworldName;
+    public static int borderSize;
+    public static int borderTime;
+    public static int gracePeriod;
+    public static int scatterSize;
+    public static boolean lateScatter;
+
     @Override
     public void onEnable() {
         // Plugin startup logic
+        saveConfig();
         getCommand("ruhc").setExecutor(new UHCCommand());
         getServer().getPluginManager().registerEvents(this, this);
         Bukkit.getPluginManager().registerEvents(new MenuFunctionListener(), this);
         System.out.println("RubiksUHC has been initialized!");
 
-
+        // Config magics
+        overworldName = getConfig().getString("world.overworld.name") == null ? "overworld" : getConfig().getString("world.overworld.name");
+        borderSize = getConfig().getInt("uhc.border.size");
+        borderTime = getConfig().getInt("uhc.border.time");
+        gracePeriod = getConfig().getInt("uhc.game.gracePeriod");
+        scatterSize = getConfig().getInt("uhc.game.scatterSize") < 0.2 * borderSize ? borderSize - 200 : getConfig().getInt("uhc.game.scatterSize");
+        lateScatter = getConfig().getBoolean("uhc.game.lateScatter");
+        getConfig().set("world.overworld.name", overworldName);
+        getConfig().set("uhc.border.size", borderSize);
+        getConfig().set("uhc.border.time", borderTime);
+        getConfig().set("uhc.game.gracePeriod", gracePeriod);
+        getConfig().set("uhc.game.scatterSize", scatterSize);
+        getConfig().set("uhc.game.lateScatter", lateScatter);
+        saveConfig();
 
         // Main Menu
         ItemStack scenarioItem = new ItemStack(Material.COMMAND_BLOCK);
@@ -130,19 +155,20 @@ public final class RubiksUHC extends JavaPlugin implements Listener {
     }
 
     public static void startUHC() {
-        // TODO: Use config
-        World world = Bukkit.getWorld("world");
+        World world = Bukkit.getWorld(overworldName);
         world.setTime(6000);
         WorldBorder border = world.getWorldBorder();
         border.setCenter(0.5, 0.5);
-        border.setSize(2 * 5000, 1800);
+        if (borderTime > 0) border.setSize(2 * borderSize, borderTime);
         border.setDamageAmount(2);
-        Bukkit.broadcastMessage("The border has started to shrink from 10k^2 towards x0 z0.");
-        Bukkit.broadcastMessage("It will reach x0 z0 in 1800 seconds or 30 minutes.");
-        Bukkit.broadcastMessage("There is a grace (No PVP) period of 5 minutes, good luck!");
+        if (borderTime > 0) Bukkit.broadcastMessage("The border has started to shrink from a size of" + borderSize * 2 + "square blocks towards x0 z0.");
+        else Bukkit.broadcastMessage("The border has been created with a size of " + borderSize * 2 + "square blocks.");
+        if (borderTime > 0) Bukkit.broadcastMessage("It will reach x0 z0 in " + borderTime + " seconds (" + borderTime / 60 + " minutes)");
+        if (gracePeriod > 0) Bukkit.broadcastMessage("There is a grace (No PVP) period of 5 minutes.");
+        Bukkit.broadcastMessage("Good luck, have fun!");
         timeStarted = System.currentTimeMillis();
         started = true;
-        Scatter((List<Player>) Bukkit.getOnlinePlayers(), 4800);
+        Scatter((List<Player>) Bukkit.getOnlinePlayers(), scatterSize);
     }
 
     public static void Scatter(List<Player> players, int bounds) {
@@ -169,6 +195,13 @@ public final class RubiksUHC extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent event) {
+        if (!started) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onInteract(PlayerInteractEntityEvent event) {
         if (!started) {
             event.setCancelled(true);
         }
@@ -215,8 +248,13 @@ public final class RubiksUHC extends JavaPlugin implements Listener {
             Scatter(Collections.singletonList(event.getPlayer()), 30);
         } else if (started && scattered.stream().filter(p -> p.getUniqueId() == event.getPlayer().getUniqueId()).collect(Collectors.toList()).isEmpty() && System.currentTimeMillis() < timeStarted + 3 * 60 * 100) {
             event.getPlayer().sendMessage("You're late to the UHC, " + event.getPlayer().getName() + "!");
-            Bukkit.broadcastMessage("Late scattering " + event.getPlayer().getName() + "!");
-            Scatter(Collections.singletonList(event.getPlayer()), 4800);
+            if (lateScatter) {
+                Bukkit.broadcastMessage("Late scattering " + event.getPlayer().getName() + "!");
+                Scatter(Collections.singletonList(event.getPlayer()), 4800);
+            } else {
+                dead.add(event.getPlayer());
+                Bukkit.broadcastMessage(event.getPlayer().getName() + " was late to the UHC and will be spectating the game.");
+            }
         }
         if (!dead.stream().filter(p -> p.getUniqueId() == event.getPlayer().getUniqueId()).collect(Collectors.toList()).isEmpty()) {
             event.getPlayer().setGameMode(GameMode.SURVIVAL);
