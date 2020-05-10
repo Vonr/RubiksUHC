@@ -55,7 +55,7 @@ public final class RubiksUHC extends JavaPlugin implements Listener {
 
         // Config magics
         overworldName = getConfig().getString("world.overworld.name") == null ? "overworld" : getConfig().getString("world.overworld.name");
-        borderSize = getConfig().getInt("uhc.border.size");
+        borderSize = getConfig().getInt("uhc.border.size") == 0 ? 5000 : getConfig().getInt("uhc.border.size");
         borderTime = getConfig().getInt("uhc.border.time");
         gracePeriod = getConfig().getInt("uhc.game.gracePeriod");
         scatterSize = getConfig().getInt("uhc.game.scatterSize") < 0.2 * borderSize ? borderSize - 200 : getConfig().getInt("uhc.game.scatterSize");
