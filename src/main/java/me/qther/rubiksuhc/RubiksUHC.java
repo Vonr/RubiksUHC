@@ -1,18 +1,8 @@
 package me.qther.rubiksuhc;
 
 import org.bukkit.*;
-import org.bukkit.configuration.InvalidConfigurationException;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.block.BlockPlaceEvent;
-import org.bukkit.event.entity.*;
 import org.bukkit.event.inventory.ClickType;
-import org.bukkit.event.player.PlayerInteractEntityEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -24,18 +14,23 @@ import org.ipvp.canvas.MenuFunctionListener;
 import org.ipvp.canvas.slot.ClickOptions;
 import org.ipvp.canvas.type.ChestMenu;
 
+import java.math.RoundingMode;
+import java.text.DecimalFormat;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
-public final class RubiksUHC extends JavaPlugin implements Listener {
+public final class RubiksUHC extends JavaPlugin {
 
     public static Menu mainMenu = RubiksUHC.createMenu("RubiksUHC Menu");
     public static Menu scenarioMenu = RubiksUHC.createMenu("RubiksUHC Menu");
     public static boolean started = false;
     public static boolean ended = false;
     public static long timeStarted = 0;
-    public static List<Player> scattered = new ArrayList<>(Arrays.asList());
-    public static List<Player> dead = new ArrayList<>(Arrays.asList());
+    public static List<UUID> scattered = new ArrayList<>(Arrays.asList());
+    public static List<UUID> dead = new ArrayList<>(Arrays.asList());
+
+    static DecimalFormat df = new DecimalFormat("#.00");
 
     public static String overworldName;
     public static int borderSize;
@@ -49,12 +44,12 @@ public final class RubiksUHC extends JavaPlugin implements Listener {
         // Plugin startup logic
         saveConfig();
         getCommand("ruhc").setExecutor(new UHCCommand());
-        getServer().getPluginManager().registerEvents(this, this);
+        getServer().getPluginManager().registerEvents(new EventListener(), this);
         Bukkit.getPluginManager().registerEvents(new MenuFunctionListener(), this);
         System.out.println("RubiksUHC has been initialized!");
 
         // Config magics
-        overworldName = getConfig().getString("world.overworld.name") == null ? "overworld" : getConfig().getString("world.overworld.name");
+        overworldName = getConfig().getString("world.overworld.name") == null ? "world" : getConfig().getString("world.overworld.name");
         borderSize = getConfig().getInt("uhc.border.size") == 0 ? 5000 : getConfig().getInt("uhc.border.size");
         borderTime = getConfig().getInt("uhc.border.time");
         gracePeriod = getConfig().getInt("uhc.game.gracePeriod");
@@ -69,29 +64,24 @@ public final class RubiksUHC extends JavaPlugin implements Listener {
         saveConfig();
 
         // Main Menu
-        ItemStack scenarioItem = new ItemStack(Material.COMMAND_BLOCK);
-        ItemMeta scenarioIM = scenarioItem.getItemMeta();
-        scenarioIM.setDisplayName("\u00a7r\u00a76Scenarios");
-        scenarioItem.setItemMeta(scenarioIM);
+        ItemStack scenarioItem = createItemStack(Material.COMMAND_BLOCK, 1, "&r&6Scenarios");
         mainMenu.getSlot(0).setItem(scenarioItem);
         mainMenu.getSlot(0).setClickHandler((player, info) -> {
             displayMenu(player, scenarioMenu);
         });
-        ItemStack startItem = new ItemStack(Material.LIME_WOOL);
-        ItemMeta startIM = startItem.getItemMeta();
-        startIM.setDisplayName("\u00a7r\u00a7aStart");
-        startItem.setItemMeta(startIM);
+        ItemStack startItem = createItemStack(Material.LIME_WOOL, 1, "&r&aStart");
         mainMenu.getSlot(4).setItem(startItem);
         mainMenu.getSlot(4).setClickHandler((player, info) -> {
-            startUHC();
+            if (player.hasPermission("rubiksuhc.uhc.start")) {
+                startUHC();
+            } else {
+                player.sendMessage("You do not have permission to start the UHC!");
+            }
             mainMenu.close(player);
         });
 
         // Scenario Menu
-        ItemStack backItem = new ItemStack(Material.BARRIER);
-        ItemMeta backIM = backItem.getItemMeta();
-        backIM.setDisplayName("\u00a7r\u00a7cBack");
-        backItem.setItemMeta(backIM);
+        ItemStack backItem = createItemStack(Material.BARRIER, 1, "&r&cBack");
         scenarioMenu.getSlot(27).setItem(backItem);
         scenarioMenu.getSlot(27).setClickHandler((player, info) -> {
             displayMenu(player, mainMenu);
@@ -110,25 +100,25 @@ public final class RubiksUHC extends JavaPlugin implements Listener {
         BukkitScheduler scheduler = getServer().getScheduler();
         scheduler.scheduleSyncRepeatingTask(this, () -> {
             if (started) {
-                dead.forEach(p -> p.setGameMode(GameMode.SPECTATOR));
-                if (Bukkit.getOnlinePlayers().size() - dead.size() <= 1) {
-                    Player winner = Bukkit.getOnlinePlayers().stream().filter(p -> {
-                        for (Player player : dead) {
-                            if (p.getUniqueId() == player.getUniqueId()) {
+                dead.forEach(p -> Bukkit.getPlayer(p).setGameMode(GameMode.SPECTATOR));
+                if (scattered.size() - dead.size() <= 1) {
+                    Player winner = Bukkit.getPlayer(scattered.stream().filter(p -> {
+                        for (UUID player : dead) {
+                            if (p == player) {
                                 return false;
                             }
                         }
                         return true;
-                    }).collect(Collectors.toList()).get(0);
+                    }).collect(Collectors.toList()).get(0));
+                    if (!winner.isOnline()) { winner = Bukkit.getPlayer(dead.get(dead.size() - 1)); }
                     if (!ended) {
-                        winner.teleport(new Location(winner.getWorld(), 0.5, 300, 0.5));
-                        winner.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 100000, 50));
+                        winner.teleport(new Location(winner.getWorld(), 0, 300, 0));
                         Bukkit.broadcastMessage(winner.getName() + " is our WINNER!");
                         Bukkit.broadcastMessage(winner.getName() + " is our WINNER!");
                         Bukkit.broadcastMessage(winner.getName() + " is our WINNER!");
                         World world = Bukkit.getWorld("world");
                         WorldBorder border = world.getWorldBorder();
-                        border.setCenter(0.5, 0.5);
+                        border.setCenter(0, 0);
                         border.setSize(2 * 35);
                         border.setDamageAmount(0);
                     }
@@ -155,17 +145,18 @@ public final class RubiksUHC extends JavaPlugin implements Listener {
     }
 
     public static void startUHC() {
-        World world = Bukkit.getWorld(overworldName);
-        world.setTime(6000);
-        WorldBorder border = world.getWorldBorder();
-        border.setCenter(0.5, 0.5);
-        if (borderTime > 0) border.setSize(2 * borderSize, borderTime);
-        else border.setSize(2 * borderSize);
-        border.setDamageAmount(2);
-        if (borderTime > 0) Bukkit.broadcastMessage("The border has started to shrink from a size of" + borderSize * 2 + "square blocks towards x0 z0.");
-        else Bukkit.broadcastMessage("The border has been created with a size of " + borderSize * 2 + "square blocks.");
-        if (borderTime > 0) Bukkit.broadcastMessage("It will reach x0 z0 in " + borderTime + " seconds (" + borderTime / 60 + " minutes)");
-        if (gracePeriod > 0) Bukkit.broadcastMessage("There is a grace (No PVP) period of 5 minutes.");
+        Bukkit.getWorld(overworldName).setTime(6000);
+        Objects.requireNonNull(Bukkit.getWorld(overworldName)).getWorldBorder().setCenter(0, 0);
+        if (borderTime > 0) {
+            Objects.requireNonNull(Bukkit.getWorld(overworldName)).getWorldBorder().setSize(2 * borderSize);
+            Objects.requireNonNull(Bukkit.getWorld(overworldName)).getWorldBorder().setSize(0.5, borderTime);
+        }
+        else Objects.requireNonNull(Bukkit.getWorld(overworldName)).getWorldBorder().setSize(2 * borderSize);
+        Objects.requireNonNull(Bukkit.getWorld(overworldName)).getWorldBorder().setDamageAmount(2);
+        if (borderTime > 0) Bukkit.broadcastMessage("The border has started to shrink from a size of " + borderSize * 2 + " square blocks towards x0 z0.");
+        else Bukkit.broadcastMessage("The border has been created with a size of " + borderSize * 2 + " square blocks.");
+        if (borderTime > 0) Bukkit.broadcastMessage("It will reach x0 z0 in " + borderTime + " seconds (" + df.format(borderTime / 60) + " minutes)");
+        if (gracePeriod > 0) Bukkit.broadcastMessage("There is a grace (No PVP) period of " + gracePeriod + " seconds (" + df.format(gracePeriod / 60) + " minutes)");
         Bukkit.broadcastMessage("Good luck, have fun!");
         timeStarted = System.currentTimeMillis();
         started = true;
@@ -174,103 +165,22 @@ public final class RubiksUHC extends JavaPlugin implements Listener {
 
     public static void Scatter(List<Player> players, int bounds) {
         players.forEach(player -> {
-            Bukkit.broadcastMessage("Scattering " + player.getName() + "!");
+            if (started) Bukkit.broadcastMessage("Scattering " + player.getName() + "!");
             player.setHealth(20);
             player.setFoodLevel(20);
             player.setSaturation(20);
-            Random rand = new Random(player.getUniqueId().getMostSignificantBits() * System.currentTimeMillis());
-            Random rand2 = new Random(player.getUniqueId().getMostSignificantBits() + System.currentTimeMillis() * 777);
-            player.teleport(new Location(player.getWorld(), rand.nextInt((bounds * 2) + 1) - bounds, 300, rand2.nextInt((bounds * 2) + 1) - bounds));
-            player.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 20 * 20,50));
-            scattered.add(player);
+            player.teleport(new Location(player.getWorld(), ThreadLocalRandom.current().nextInt(-bounds, bounds + 1), 300, ThreadLocalRandom.current().nextInt(-bounds, bounds + 1)));
+            player.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 20 * 30,50));
+            if (started && !scattered.contains(player.getUniqueId())) scattered.add(player.getUniqueId());
         });
     }
 
-    @EventHandler
-    public void onBlockBreak(BlockBreakEvent event) {
-        if (!started) {
-            event.getPlayer().sendMessage("The UHC has not started!");
-            event.setCancelled(true);
-        }
+    public static ItemStack createItemStack(Material material, int amount, String name) {
+        ItemStack stack = new ItemStack(material, amount);
+        ItemMeta stackMeta = stack.getItemMeta();
+        stackMeta.setDisplayName(name.replaceAll("&", "\u00a7"));
+        stack.setItemMeta(stackMeta);
+        return stack;
     }
 
-    @EventHandler
-    public void onBlockPlace(BlockPlaceEvent event) {
-        if (!started) {
-            event.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void onInteract(PlayerInteractEntityEvent event) {
-        if (!started) {
-            event.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void onPickUp(EntityPickupItemEvent event) {
-        if (!started) {
-            event.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void onAttack(EntityDamageByEntityEvent event) {
-        if (!started || ended || (event.getDamager() instanceof Player && event.getEntity() instanceof Player && System.currentTimeMillis() < timeStarted + gracePeriod)) {
-            event.setCancelled(true);
-        }
-    }
-
-    @EventHandler
-    public void onDamaged(EntityDamageEvent event) {
-        if (!started || ended) event.setCancelled(true);
-    }
-
-    @EventHandler
-    public void onPlayerJoin(PlayerJoinEvent event) {
-        scattered.stream().filter(p -> p.getUniqueId() == event.getPlayer().getUniqueId()).forEach(p -> {
-            p.sendMessage("Clearing your inventory and potion effects!");
-            ItemStack[] pinv = p.getInventory().getContents();
-            for (ItemStack i : pinv) {
-                i.setType(Material.AIR);
-                i.setAmount(0);
-            }
-            p.getInventory().setContents(pinv);
-            p.getActivePotionEffects().forEach(e -> p.removePotionEffect(e.getType()));
-        });
-        if (!started) {
-            World world = Bukkit.getWorld("world");
-            WorldBorder border = world.getWorldBorder();
-            border.setCenter(0, 0);
-            border.setSize(2 * 35);
-            border.setDamageAmount(0);
-            event.getPlayer().sendMessage("Welcome to the UHC, " + event.getPlayer().getName() + "!");
-            Scatter(Collections.singletonList(event.getPlayer()), 30);
-        } else if (started && scattered.stream().filter(p -> p.getUniqueId() == event.getPlayer().getUniqueId()).collect(Collectors.toList()).isEmpty() && System.currentTimeMillis() < timeStarted + 3 * 60 * 100) {
-            event.getPlayer().sendMessage("You're late to the UHC, " + event.getPlayer().getName() + "!");
-            if (lateScatter) {
-                Bukkit.broadcastMessage("Late scattering " + event.getPlayer().getName() + "!");
-                Scatter(Collections.singletonList(event.getPlayer()), 4800);
-            } else {
-                dead.add(event.getPlayer());
-                Bukkit.broadcastMessage(event.getPlayer().getName() + " was late to the UHC and will be spectating the game.");
-            }
-        }
-        if (!dead.stream().filter(p -> p.getUniqueId() == event.getPlayer().getUniqueId()).collect(Collectors.toList()).isEmpty()) {
-            event.getPlayer().setGameMode(GameMode.SURVIVAL);
-        }
-    }
-
-    @EventHandler
-    public void onPortalEvent(EntityPortalEvent event) {
-        event.setCancelled(true);
-    }
-
-    @EventHandler
-    public void onPlayerDeath(PlayerDeathEvent event) {
-        if (started) {
-            dead.add(event.getEntity());
-        }
-    }
 }
