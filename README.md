@@ -6,6 +6,8 @@ I made this plugin for fun but I do plan to make it functional.
 
 Planned Features:
 
+ - Scenarios
+
  - In-game Config Editor
 
 ### Config
@@ -37,3 +39,7 @@ uhc.game.gracePeriod is the time in seconds of the grace period if less than or 
 uhc.game.lateScatter controls whether players late to the game by 3 minutes maximum can join the game as a player. If set to false, they will join as spectators.
 
 uhc.game.scenarios stores boolean values for each scenario controlling whether they are enabled. These can be changed in game.
+
+### Permissions
+
+rubiksuhc.uhc.start - Allows the player to start the UHC Game.
