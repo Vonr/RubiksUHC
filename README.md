@@ -8,8 +8,6 @@ Planned Features:
 
  - Scenarios
 
- - Permissions
-
  - In-game Config Editor
 
 
@@ -19,7 +17,7 @@ Default Config:
 ```yaml
 world:
   overworld:
-    name: overworld
+    name: world
 uhc:
   border:
     size: 5000
@@ -38,3 +36,7 @@ uhc.border.time is the time taken in seconds for the border to shrink to x0 z0. 
 uhc.game.gracePeriod is the time in seconds of the grace period if less than or equal to 0, there will be no grace period.
 
 uhc.game.lateScatter controls whether players late to the game by 3 minutes maximum can join the game as a player. If set to false, they will join as spectators.
+
+### Permissions
+
+rubiksuhc.uhc.start - Allows the player to start the UHC Game.
