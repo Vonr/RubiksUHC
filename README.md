@@ -42,6 +42,7 @@ uhc.game.scenarios stores boolean values for each scenario controlling whether t
 ### Permissions
 
 rubiksuhc.uhc.start - Allows the player to start the UHC Game.
+
 rubiksuhc.uhc.changeScenarios - Allows the player to enable and disable scenarios.
 
 ### Scenarios
