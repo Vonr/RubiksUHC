@@ -1,6 +1,7 @@
 package me.qther.rubiksuhc;
 
 import org.bukkit.*;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -9,7 +10,9 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.world.PortalCreateEvent;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.util.Vector;
 
 import java.util.Collections;
 import java.util.Objects;
@@ -70,14 +73,28 @@ public class EventListener implements Listener {
 
     @EventHandler
     public void onDamaged(EntityDamageEvent event) {
+        if (event.getEntityType() == EntityType.DROPPED_ITEM) {
+            event.getEntity().setVelocity(event.getEntity().getVelocity().add(new Vector(0, 0.1, 0)));
+            event.setCancelled(true);
+        }
         if (!started || ended || timeStarted + 20 * 100 > System.currentTimeMillis()) event.setCancelled(true);
     }
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
+        // Get overworld
+        RubiksUHC.overworld = Bukkit.getWorld(overworldName);
+
+        // Gamerules
+        Objects.requireNonNull(RubiksUHC.overworld).setGameRule(GameRule.NATURAL_REGENERATION, false);
+        Objects.requireNonNull(RubiksUHC.overworld).setGameRule(GameRule.MOB_GRIEFING, false);
+        Objects.requireNonNull(RubiksUHC.overworld).setGameRule(GameRule.DISABLE_RAIDS, true);
+        Objects.requireNonNull(RubiksUHC.overworld).setGameRule(GameRule.DO_PATROL_SPAWNING, true);
         if (!started) {
-            event.getPlayer().sendMessage("Clearing your inventory and potion effects!");
+            event.getPlayer().sendMessage("Clearing your inventory, potion effects and XP!");
             event.getPlayer().setGameMode(GameMode.SURVIVAL);
+            event.getPlayer().setLevel(0);
+            event.getPlayer().setExp(0);
             PlayerInventory pinv = event.getPlayer().getInventory();
             pinv.clear();
             pinv.setHelmet(null);
@@ -92,8 +109,10 @@ public class EventListener implements Listener {
             event.getPlayer().sendMessage("Welcome to the UHC, " + event.getPlayer().getName() + "!");
             Scatter(Collections.singletonList(event.getPlayer()), 30);
         } else if (scattered.stream().filter(p -> p == event.getPlayer().getUniqueId()).collect(Collectors.toList()).isEmpty() && System.currentTimeMillis() < timeStarted + 3 * 60 * 100) {
+            event.getPlayer().sendMessage("Clearing your inventory, potion effects and XP!");
             event.getPlayer().setGameMode(GameMode.SURVIVAL);
-            event.getPlayer().sendMessage("Clearing your inventory and potion effects!");
+            event.getPlayer().setLevel(0);
+            event.getPlayer().setExp(0);
             PlayerInventory pinv = event.getPlayer().getInventory();
             pinv.clear();
             pinv.setHelmet(null);
@@ -122,8 +141,14 @@ public class EventListener implements Listener {
     }
 
     @EventHandler
+    public void onPortalCreate(PortalCreateEvent event) {
+        event.setCancelled(true);
+    }
+
+    @EventHandler
     public void onPlayerDeath(PlayerDeathEvent event) {
         if (started) {
+            Bukkit.getOnlinePlayers().forEach(player -> player.playSound(player.getLocation(), Sound.ENTITY_LIGHTNING_BOLT_THUNDER, SoundCategory.MASTER, 0.5f, 1f));
             dead.add(event.getEntity().getUniqueId());
         }
     }

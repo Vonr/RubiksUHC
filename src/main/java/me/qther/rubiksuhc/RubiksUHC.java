@@ -1,5 +1,6 @@
 package me.qther.rubiksuhc;
 
+import me.qther.rubiksuhc.scenarios.CutClean;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
@@ -14,13 +15,13 @@ import org.ipvp.canvas.MenuFunctionListener;
 import org.ipvp.canvas.slot.ClickOptions;
 import org.ipvp.canvas.type.ChestMenu;
 
-import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Collectors;
 
 public final class RubiksUHC extends JavaPlugin {
+
+    public static World overworld = null;
 
     public static Menu mainMenu = RubiksUHC.createMenu("RubiksUHC Menu");
     public static Menu scenarioMenu = RubiksUHC.createMenu("RubiksUHC Menu");
@@ -29,6 +30,8 @@ public final class RubiksUHC extends JavaPlugin {
     public static long timeStarted = 0;
     public static List<UUID> scattered = new ArrayList<>(Arrays.asList());
     public static List<UUID> dead = new ArrayList<>(Arrays.asList());
+
+    ItemStack cutCleanIndicatorItem;
 
     static DecimalFormat df = new DecimalFormat("#.00");
 
@@ -48,6 +51,9 @@ public final class RubiksUHC extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new MenuFunctionListener(), this);
         System.out.println("RubiksUHC has been initialized!");
 
+        // Scenario
+        getServer().getPluginManager().registerEvents(new CutClean(), this);
+
         // Config magics
         overworldName = getConfig().getString("world.overworld.name") == null ? "world" : getConfig().getString("world.overworld.name");
         borderSize = getConfig().getInt("uhc.border.size") == 0 ? 5000 : getConfig().getInt("uhc.border.size");
@@ -55,13 +61,18 @@ public final class RubiksUHC extends JavaPlugin {
         gracePeriod = getConfig().getInt("uhc.game.gracePeriod");
         scatterSize = getConfig().getInt("uhc.game.scatterSize") < 0.2 * borderSize ? borderSize - 200 : getConfig().getInt("uhc.game.scatterSize");
         lateScatter = getConfig().getBoolean("uhc.game.lateScatter");
+        CutClean.enabled = getConfig().getBoolean("uhc.scenarios.cutClean");
         getConfig().set("world.overworld.name", overworldName);
         getConfig().set("uhc.border.size", borderSize);
         getConfig().set("uhc.border.time", borderTime);
         getConfig().set("uhc.game.gracePeriod", gracePeriod);
         getConfig().set("uhc.game.scatterSize", scatterSize);
         getConfig().set("uhc.game.lateScatter", lateScatter);
+        getConfig().set("uhc.scenarios.cutClean", CutClean.enabled);
         saveConfig();
+
+        // Scenario Indicators
+        cutCleanIndicatorItem = CutClean.enabled ? new ItemStack(Material.LIME_STAINED_GLASS_PANE) : new ItemStack(Material.RED_STAINED_GLASS_PANE);
 
         // Main Menu
         ItemStack scenarioItem = createItemStack(Material.COMMAND_BLOCK, 1, "&r&6Scenarios");
@@ -73,7 +84,11 @@ public final class RubiksUHC extends JavaPlugin {
         mainMenu.getSlot(4).setItem(startItem);
         mainMenu.getSlot(4).setClickHandler((player, info) -> {
             if (player.hasPermission("rubiksuhc.uhc.start")) {
-                startUHC();
+                if (!started) {
+                    startUHC();
+                } else {
+                    player.sendMessage("The UHC has already begun!");
+                }
             } else {
                 player.sendMessage("You do not have permission to start the UHC!");
             }
@@ -85,6 +100,26 @@ public final class RubiksUHC extends JavaPlugin {
         scenarioMenu.getSlot(27).setItem(backItem);
         scenarioMenu.getSlot(27).setClickHandler((player, info) -> {
             displayMenu(player, mainMenu);
+        });
+
+        // CutClean
+        ItemStack cutCleanItem = createItemStack(Material.IRON_INGOT, 1, "&r&6CutClean", "&r&cAutomatically smelts", "&6Gold &cand &7Iron",  "&cores when mined");
+        scenarioMenu.getSlot(10).setItem(cutCleanItem);
+        scenarioMenu.getSlot(10).setClickHandler((player, info) -> {
+            if (player.hasPermission("rubiksuhc.uhc.changeScenarios")) {
+                if (!started) {
+                    CutClean.enabled = !CutClean.enabled;
+                    getConfig().set("uhc.scenarios.cutClean", CutClean.enabled);
+                    saveConfig();
+                    Bukkit.broadcastMessage("CutClean is now " + (CutClean.enabled ? "enabled!" : "disabled!"));
+                    cutCleanIndicatorItem = CutClean.enabled ? new ItemStack(Material.LIME_STAINED_GLASS_PANE) : new ItemStack(Material.RED_STAINED_GLASS_PANE);
+                    displayMenu(player, scenarioMenu);
+                } else {
+                    Bukkit.broadcastMessage("CutClean is " + (CutClean.enabled ? "enabled!" : "disabled!"));
+                }
+            } else {
+                player.sendMessage("You do not have permission to change scenarios!");
+            }
         });
 
         //Click Options
@@ -99,7 +134,7 @@ public final class RubiksUHC extends JavaPlugin {
 
         BukkitScheduler scheduler = getServer().getScheduler();
         scheduler.scheduleSyncRepeatingTask(this, () -> {
-            if (started) {
+            /*if (started) {
                 dead.forEach(p -> Bukkit.getPlayer(p).setGameMode(GameMode.SPECTATOR));
                 if (scattered.size() - dead.size() <= 1) {
                     Player winner = Bukkit.getPlayer(scattered.stream().filter(p -> {
@@ -124,7 +159,7 @@ public final class RubiksUHC extends JavaPlugin {
                     }
                     ended = true;
                 }
-            }
+            }*/
         }, 0L, 1L);
     }
 
@@ -145,14 +180,14 @@ public final class RubiksUHC extends JavaPlugin {
     }
 
     public static void startUHC() {
-        Bukkit.getWorld(overworldName).setTime(6000);
-        Objects.requireNonNull(Bukkit.getWorld(overworldName)).getWorldBorder().setCenter(0, 0);
+        overworld.setTime(6000);
+        Objects.requireNonNull(overworld).getWorldBorder().setCenter(0, 0);
         if (borderTime > 0) {
-            Objects.requireNonNull(Bukkit.getWorld(overworldName)).getWorldBorder().setSize(2 * borderSize);
-            Objects.requireNonNull(Bukkit.getWorld(overworldName)).getWorldBorder().setSize(0.5, borderTime);
+            Objects.requireNonNull(overworld).getWorldBorder().setSize(2 * borderSize);
+            Objects.requireNonNull(overworld).getWorldBorder().setSize(0.5, borderTime);
         }
-        else Objects.requireNonNull(Bukkit.getWorld(overworldName)).getWorldBorder().setSize(2 * borderSize);
-        Objects.requireNonNull(Bukkit.getWorld(overworldName)).getWorldBorder().setDamageAmount(2);
+        else Objects.requireNonNull(overworld).getWorldBorder().setSize(2 * borderSize);
+        Objects.requireNonNull(overworld).getWorldBorder().setDamageAmount(0.2);
         if (borderTime > 0) Bukkit.broadcastMessage("The border has started to shrink from a size of " + borderSize * 2 + " square blocks towards x0 z0.");
         else Bukkit.broadcastMessage("The border has been created with a size of " + borderSize * 2 + " square blocks.");
         if (borderTime > 0) Bukkit.broadcastMessage("It will reach x0 z0 in " + borderTime + " seconds (" + df.format(borderTime / 60) + " minutes)");
@@ -179,6 +214,19 @@ public final class RubiksUHC extends JavaPlugin {
         ItemStack stack = new ItemStack(material, amount);
         ItemMeta stackMeta = stack.getItemMeta();
         stackMeta.setDisplayName(name.replaceAll("&", "\u00a7"));
+        stack.setItemMeta(stackMeta);
+        return stack;
+    }
+
+    public static ItemStack createItemStack(Material material, int amount, String name, String... lore) {
+        ItemStack stack = new ItemStack(material, amount);
+        ItemMeta stackMeta = stack.getItemMeta();
+        stackMeta.setDisplayName(name.replaceAll("&", "\u00a7"));
+        List<String> loreAsList = new ArrayList<>(Arrays.asList(lore));
+        for (int i = 0; i < loreAsList.size(); i++) {
+            loreAsList.set(i, loreAsList.get(i).replaceAll("&", "\u00a7"));
+        }
+        stackMeta.setLore(loreAsList);
         stack.setItemMeta(stackMeta);
         return stack;
     }

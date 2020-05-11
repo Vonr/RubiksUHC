@@ -15,10 +15,6 @@ public class UHCCommand implements CommandExecutor {
         } else {
             return false;
         }
-        if (RubiksUHC.started) {
-            player.sendMessage("The UHC has already begun!");
-            return true;
-        }
         RubiksUHC.displayMenu(player, RubiksUHC.mainMenu);
 
         return true;
