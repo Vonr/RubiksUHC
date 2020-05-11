@@ -1,6 +1,7 @@
 package me.qther.rubiksuhc;
 
 import me.qther.rubiksuhc.scenarios.CutClean;
+import me.qther.rubiksuhc.scenarios.QuickTools;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
@@ -53,6 +54,7 @@ public final class RubiksUHC extends JavaPlugin {
 
         // Scenario
         getServer().getPluginManager().registerEvents(new CutClean(), this);
+        getServer().getPluginManager().registerEvents(new QuickTools(), this);
 
         // Config magics
         overworldName = getConfig().getString("world.overworld.name") == null ? "world" : getConfig().getString("world.overworld.name");
@@ -62,6 +64,7 @@ public final class RubiksUHC extends JavaPlugin {
         scatterSize = getConfig().getInt("uhc.game.scatterSize") < 0.2 * borderSize ? borderSize - 200 : getConfig().getInt("uhc.game.scatterSize");
         lateScatter = getConfig().getBoolean("uhc.game.lateScatter");
         CutClean.enabled = getConfig().getBoolean("uhc.scenarios.cutClean");
+        QuickTools.enabled = getConfig().getBoolean("uhc.scenarios.quickTools");
         getConfig().set("world.overworld.name", overworldName);
         getConfig().set("uhc.border.size", borderSize);
         getConfig().set("uhc.border.time", borderTime);
@@ -69,6 +72,7 @@ public final class RubiksUHC extends JavaPlugin {
         getConfig().set("uhc.game.scatterSize", scatterSize);
         getConfig().set("uhc.game.lateScatter", lateScatter);
         getConfig().set("uhc.scenarios.cutClean", CutClean.enabled);
+        getConfig().set("uhc.scenarios.quickTools", QuickTools.enabled);
         saveConfig();
 
         // Scenario Indicators
@@ -103,7 +107,7 @@ public final class RubiksUHC extends JavaPlugin {
         });
 
         // CutClean
-        ItemStack cutCleanItem = createItemStack(Material.IRON_INGOT, 1, "&r&6CutClean", "&r&cAutomatically smelts", "&6Gold &cand &7Iron",  "&cores when mined");
+        ItemStack cutCleanItem = createItemStack(Material.IRON_INGOT, 1, "&r&6CutClean", "&r&cAutomatically smelts", "&r&6Gold &cand &7Iron",  "&r&cores when mined");
         scenarioMenu.getSlot(10).setItem(cutCleanItem);
         scenarioMenu.getSlot(10).setClickHandler((player, info) -> {
             if (player.hasPermission("rubiksuhc.uhc.changeScenarios")) {
@@ -112,13 +116,31 @@ public final class RubiksUHC extends JavaPlugin {
                     getConfig().set("uhc.scenarios.cutClean", CutClean.enabled);
                     saveConfig();
                     Bukkit.broadcastMessage("CutClean is now " + (CutClean.enabled ? "enabled!" : "disabled!"));
-                    cutCleanIndicatorItem = CutClean.enabled ? new ItemStack(Material.LIME_STAINED_GLASS_PANE) : new ItemStack(Material.RED_STAINED_GLASS_PANE);
                     displayMenu(player, scenarioMenu);
                 } else {
                     Bukkit.broadcastMessage("CutClean is " + (CutClean.enabled ? "enabled!" : "disabled!"));
                 }
             } else {
-                player.sendMessage("You do not have permission to change scenarios!");
+                Bukkit.broadcastMessage("CutClean is " + (CutClean.enabled ? "enabled!" : "disabled!"));
+            }
+        });
+
+        // Quick Tools
+        ItemStack quickToolsItem = createItemStack(Material.DIAMOND_PICKAXE, 1, "&r&6Quick Tools", "&r&cMakes crafted tools", "&r&chave &6Efficiency 3 &cand",  "&r&6Unbreaking 1");
+        scenarioMenu.getSlot(11).setItem(quickToolsItem);
+        scenarioMenu.getSlot(11).setClickHandler((player, info) -> {
+            if (player.hasPermission("rubiksuhc.uhc.changeScenarios")) {
+                if (!started) {
+                    QuickTools.enabled = !QuickTools.enabled;
+                    getConfig().set("uhc.scenarios.quickTools", QuickTools.enabled);
+                    saveConfig();
+                    Bukkit.broadcastMessage("Quick Tools is now " + (QuickTools.enabled ? "enabled!" : "disabled!"));
+                    displayMenu(player, scenarioMenu);
+                } else {
+                    Bukkit.broadcastMessage("Quick Tools is " + (QuickTools.enabled ? "enabled!" : "disabled!"));
+                }
+            } else {
+                Bukkit.broadcastMessage("Quick Tools is " + (QuickTools.enabled ? "enabled!" : "disabled!"));
             }
         });
 

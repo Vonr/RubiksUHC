@@ -6,8 +6,6 @@ I made this plugin for fun but I do plan to make it functional.
 
 Planned Features:
 
- - Scenarios
-
  - In-game Config Editor
 
 ### Config
@@ -27,6 +25,7 @@ uhc:
     lateScatter: false
   scenarios:
     cutClean: false
+    quickTools: false
 ```
 world.overworld.name is the name of the folder containing your overworld data.
 
@@ -43,3 +42,10 @@ uhc.game.scenarios stores boolean values for each scenario controlling whether t
 ### Permissions
 
 rubiksuhc.uhc.start - Allows the player to start the UHC Game.
+rubiksuhc.uhc.changeScenarios - Allows the player to enable and disable scenarios.
+
+### Scenarios
+
+CutClean - Automatically smelts Gold and Iron Ores.
+
+Quick Tools - Enchants crafted tools with Efficiency 3 and Unbreaking 1.
