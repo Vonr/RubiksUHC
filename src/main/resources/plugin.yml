@@ -2,7 +2,7 @@ name: RubiksUHC
 version: ${project.version}
 main: me.qther.rubiksuhc.RubiksUHC
 api-version: 1.13
-load: STARTUP
+load: POSTWORLD
 authors: [Qther]
 description: Made for Rubik's Craft SMP.
 commands:

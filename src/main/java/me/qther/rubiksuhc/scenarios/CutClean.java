@@ -45,7 +45,7 @@ public class CutClean implements Listener {
                 if (damageable.getDamage() > item.getType().getMaxDurability()) {
                     event.getPlayer().getInventory().setItemInMainHand(new ItemStack(Material.AIR));
                 }
-                event.getPlayer().giveExp(ThreadLocalRandom.current().nextInt(0, 10) + 1 >= 7 ? 1 : 0);
+                event.getPlayer().giveExp(ThreadLocalRandom.current().nextInt(0, 10) + 1 <= 7 ? 1 : 0);
                 event.getBlock().getWorld().dropItem(event.getBlock().getLocation().add(0.5, 0, 0.5), new ItemStack(Material.IRON_INGOT, 1));
             }
         }
