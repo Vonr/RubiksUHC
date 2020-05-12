@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 
 public final class RubiksUHC extends JavaPlugin {
 
-    private static final boolean devMode = false;
+    private static final boolean devMode = true;
 
     public static World overworld = null;
     public static Scoreboard scoreboard;
@@ -259,15 +259,6 @@ public final class RubiksUHC extends JavaPlugin {
             if (started) {
                 World world = Bukkit.getWorld(overworldName);
                 WorldBorder border = world.getWorldBorder();
-
-                // Vein Miner
-                VeinMiner.ores.values().forEach(VeinMiner::mineOres);
-                for (Map.Entry<Location, Location> entry : VeinMiner.ores.entrySet()) {
-                    VeinMiner.ores.remove(entry.getKey(), entry.getValue());
-                }
-                for (Map.Entry<Location, Integer> entry : VeinMiner.fortune.entrySet()) {
-                    VeinMiner.ores.remove(entry.getKey(), entry.getValue());
-                }
 
                 // Scoreboard
                 sb_timeLeft.setScore(ended ? 0 : (int) Math.max(0, timeStarted + borderTime * 1000 - System.currentTimeMillis()) / 1000);

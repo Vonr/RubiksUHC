@@ -13,15 +13,15 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class VeinMiner implements Listener {
 
     public static boolean enabled;
 
-    public static Map<Location, Location> ores = new ConcurrentHashMap<>();
-    public static Map<Location, Integer> fortune = new ConcurrentHashMap<>();
+    public static Map<Location, Location> ores = new HashMap<>();
+    public static Map<Location, Integer> fortune = new HashMap<>();
+    public static List<Location> checked = new ArrayList<>(Arrays.asList());
 
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
@@ -52,22 +52,29 @@ public class VeinMiner implements Listener {
             switch (block.getType()) {
                 case COAL_ORE:
                 case NETHER_QUARTZ_ORE:
-                    event.setCancelled(true);
-                    if (toolStrength >= 1) new Thread(() -> lookForOres(blockLoc, blockLoc)).start();;
-                    new Thread(() -> lookForOres(blockLoc, blockLoc)).start();
+                    if (toolStrength >= 1) {
+                        lookForOres(blockLoc, blockLoc);
+                        mineOres(blockLoc);
+                        event.setCancelled(true);
+                    }
                     break;
                 case GOLD_ORE:
                 case EMERALD_ORE:
                 case REDSTONE_ORE:
                 case DIAMOND_ORE:
-                    event.setCancelled(true);
-                    if (toolStrength >= 3) new Thread(() -> lookForOres(blockLoc, blockLoc)).start();;
-                    new Thread(() -> lookForOres(blockLoc, blockLoc)).start();
+                    if (toolStrength >= 3) {
+                        lookForOres(blockLoc, blockLoc);
+                        mineOres(blockLoc);
+                        event.setCancelled(true);
+                    };
                     break;
                 case IRON_ORE:
                 case LAPIS_ORE:
-                    event.setCancelled(true);
-                    if (toolStrength >= 2) new Thread(() -> lookForOres(blockLoc, blockLoc)).start();;
+                    if (toolStrength >= 2) {
+                        lookForOres(blockLoc, blockLoc);
+                        mineOres(blockLoc);
+                        event.setCancelled(true);
+                    };
                     break;
                 default:
                     break;
@@ -77,13 +84,15 @@ public class VeinMiner implements Listener {
         }
     }
 
-    public static void lookForOres(Location origin, Location blockLoc) {
+    public void lookForOres(Location origin, Location blockLoc) {
+        if (checked.contains(origin)) return;
         for (int x = -1; x < 1; x++) {
             for (int y = -1; y < 1; y++) {
                 for (int z = -1; z < 1; z++) {
                     Location toCheck = blockLoc.add(x, y, z);
                     if (!ores.containsValue(toCheck) && toCheck.getBlock().getType() == origin.getBlock().getType()) {
                         ores.put(origin, toCheck);
+                        checked.add(toCheck);
                     }
                 }
             }
@@ -93,7 +102,7 @@ public class VeinMiner implements Listener {
         }
     }
 
-    public static void mineOres(Location key) {
+    public void mineOres(Location key) {
         for (Map.Entry<Location, Location> entry : ores.entrySet()) {
             if (key == entry.getKey()) {
                 int baseAmount = 0;
@@ -144,12 +153,14 @@ public class VeinMiner implements Listener {
                     default:
                         break;
                 }
+                if (drop == Material.AIR) return;
                 int fortuneLevel = baseAmount + (fortune.get(entry.getKey()) == null ? 0 : fortune.get(entry.getKey()));
                 if (amount != 0) amount = baseAmount + (ThreadLocalRandom.current().nextInt(1, 100 + 1) >= 100 / (fortuneLevel + 2) * 2 ? 1 : ThreadLocalRandom.current().nextInt(2, fortuneLevel + 1));
                 RubiksUHC.overworld.dropItemNaturally(key.add(0.5, 0, 0.5), new ItemStack(drop, amount));
                 int finalXp = xp;
                 RubiksUHC.overworld.spawn(key.add(0.5, 0, 0.5), ExperienceOrb.class, experienceOrb -> experienceOrb.setExperience(finalXp));
                 entry.getValue().getBlock().setType(Material.AIR);
+                ores.remove(entry.getKey(), entry.getValue());
             }
         }
     }
