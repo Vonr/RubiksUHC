@@ -3,6 +3,7 @@ package me.qther.rubiksuhc;
 import me.qther.rubiksuhc.scenarios.CutClean;
 import me.qther.rubiksuhc.scenarios.InfiniteEnchants;
 import me.qther.rubiksuhc.scenarios.QuickTools;
+import me.qther.rubiksuhc.scenarios.VeinMiner;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
@@ -74,7 +75,8 @@ public final class RubiksUHC extends JavaPlugin {
         List<Listener> scenarios = Arrays.asList(
                 new CutClean(),
                 new QuickTools(),
-                new InfiniteEnchants()
+                new InfiniteEnchants(),
+                new VeinMiner()
         );
         scenarios.forEach(scenario -> getServer().getPluginManager().registerEvents(scenario, this));
 
@@ -88,6 +90,7 @@ public final class RubiksUHC extends JavaPlugin {
         CutClean.enabled = getConfig().getBoolean("uhc.scenarios.cutClean");
         QuickTools.enabled = getConfig().getBoolean("uhc.scenarios.quickTools");
         InfiniteEnchants.enabled = getConfig().getBoolean("uhc.scenarios.infiniteEnchants");
+        VeinMiner.enabled = getConfig().getBoolean("uhc.scenarios.veinMiner");
         getConfig().set("world.overworld.name", overworldName);
         getConfig().set("uhc.border.size", borderSize);
         getConfig().set("uhc.border.time", borderTime);
@@ -97,6 +100,7 @@ public final class RubiksUHC extends JavaPlugin {
         getConfig().set("uhc.scenarios.cutClean", CutClean.enabled);
         getConfig().set("uhc.scenarios.quickTools", QuickTools.enabled);
         getConfig().set("uhc.scenarios.infiniteEnchants", InfiniteEnchants.enabled);
+        getConfig().set("uhc.scenarios.veinMiner", VeinMiner.enabled);
         saveConfig();
 
         // Get world
@@ -126,8 +130,8 @@ public final class RubiksUHC extends JavaPlugin {
             mainMenu.close(player);
         });
         ItemStack disenchantItem = createItemStack(Material.GRINDSTONE, 1, "&r&cDisenchant Held Item");
-        mainMenu.getSlot(22).setItem(disenchantItem);
-        mainMenu.getSlot(22).setClickHandler((player, info) -> {
+        mainMenu.getSlot(31).setItem(disenchantItem);
+        mainMenu.getSlot(31).setClickHandler((player, info) -> {
             if (player.getInventory().getItemInMainHand().getType() == Material.AIR) {
                 player.sendMessage(pluginPrefix + "You are not holding an item with enchantments.");
             } else {
@@ -209,6 +213,25 @@ public final class RubiksUHC extends JavaPlugin {
             }
         });
 
+        // Vein Miner
+        ItemStack veinMinerItem = createItemStack(Material.IRON_ORE, 1, "&r&6Vein Miner", "&r&cMines entire veins upon break.", "&r&cWorks with &5Fortune!");
+        scenarioMenu.getSlot(13).setItem(veinMinerItem);
+        scenarioMenu.getSlot(13).setClickHandler((player, info) -> {
+            if (player.hasPermission("rubiksuhc.uhc.changeScenarios")) {
+                if (!started) {
+                    VeinMiner.enabled = !VeinMiner.enabled;
+                    getConfig().set("uhc.scenarios.veinMiner", VeinMiner.enabled);
+                    saveConfig();
+                    Bukkit.broadcastMessage(pluginPrefix + "Vein Miner is now " + (VeinMiner.enabled ? "enabled!" : "disabled!"));
+                    displayMenu(player, scenarioMenu);
+                } else {
+                    player.sendMessage(pluginPrefix + "Vein Miner is " + (VeinMiner.enabled ? "enabled!" : "disabled!"));
+                }
+            } else {
+                player.sendMessage(pluginPrefix + "Vein Miner is " + (InfiniteEnchants.enabled ? "enabled!" : "disabled!"));
+            }
+        });
+
         // Click Options
         ClickOptions options = ClickOptions.builder()
                 .allow(ClickType.LEFT, ClickType.RIGHT)
@@ -237,6 +260,16 @@ public final class RubiksUHC extends JavaPlugin {
                 World world = Bukkit.getWorld(overworldName);
                 WorldBorder border = world.getWorldBorder();
 
+                // Vein Miner
+                VeinMiner.ores.values().forEach(VeinMiner::mineOres);
+                for (Map.Entry<Location, Location> entry : VeinMiner.ores.entrySet()) {
+                    VeinMiner.ores.remove(entry.getKey(), entry.getValue());
+                }
+                for (Map.Entry<Location, Integer> entry : VeinMiner.fortune.entrySet()) {
+                    VeinMiner.ores.remove(entry.getKey(), entry.getValue());
+                }
+
+                // Scoreboard
                 sb_timeLeft.setScore(ended ? 0 : (int) Math.max(0, timeStarted + borderTime * 1000 - System.currentTimeMillis()) / 1000);
                 sb_borderSize.setScore((int) border.getSize() / 2);
                 if (gracePeriod > 0) sb_untilPVP.setScore((int) Math.max(0, timeStarted + gracePeriod * 1000 - System.currentTimeMillis()) / 1000);
