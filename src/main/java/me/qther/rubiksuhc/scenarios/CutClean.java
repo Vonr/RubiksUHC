@@ -17,7 +17,7 @@ public class CutClean implements Listener {
 
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
-        if (enabled && RubiksUHC.started) {
+        if (!VeinMiner.enabled && enabled && RubiksUHC.started && !RubiksUHC.ended) {
             if (event.getBlock().getType() == Material.GOLD_ORE &&
                     (event.getPlayer().getInventory().getItemInMainHand().getType() == Material.IRON_PICKAXE ||
                             event.getPlayer().getInventory().getItemInMainHand().getType() == Material.DIAMOND_PICKAXE)) {

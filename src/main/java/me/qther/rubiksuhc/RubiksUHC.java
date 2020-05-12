@@ -263,7 +263,9 @@ public final class RubiksUHC extends JavaPlugin {
                 // Scoreboard
                 sb_timeLeft.setScore(ended ? 0 : (int) Math.max(0, timeStarted + borderTime * 1000 - System.currentTimeMillis()) / 1000);
                 sb_borderSize.setScore((int) border.getSize() / 2);
-                if (gracePeriod > 0) sb_untilPVP.setScore((int) Math.max(0, timeStarted + gracePeriod * 1000 - System.currentTimeMillis()) / 1000);
+                if (!ended && gracePeriod > 0) {
+                    sb_untilPVP.setScore((int) Math.max(0, timeStarted + gracePeriod * 1000 - System.currentTimeMillis()) / 1000);
+                }
                 Bukkit.getOnlinePlayers().forEach(online -> online.setScoreboard(scoreboard));
 
                 if (InfiniteEnchants.enabled) {

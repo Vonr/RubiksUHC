@@ -100,10 +100,12 @@ public class EventListener implements Listener {
             event.setCancelled(true);
             return;
         }
-        if (Objects.requireNonNull(event.getClickedBlock()).getType() == Material.GRINDSTONE) {
-            event.getPlayer().sendMessage(pluginPrefix + "Grindstones are disabled! Use /ruhc and click the Grindstone to disenchant your item.");
-            event.setCancelled(true);
-        }
+        try {
+            if (Objects.requireNonNull(event.getClickedBlock()).getType() == Material.GRINDSTONE) {
+                event.getPlayer().sendMessage(pluginPrefix + "Grindstones are disabled! Use /ruhc and click the Grindstone to disenchant your item.");
+                event.setCancelled(true);
+            }
+        } catch (Throwable ignored) {}
     }
 
     @EventHandler
