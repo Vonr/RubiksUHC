@@ -26,6 +26,7 @@ uhc:
   scenarios:
     cutClean: false
     quickTools: false
+    infiniteEnchants: false
 ```
 world.overworld.name is the name of the folder containing your overworld data.
 
@@ -50,3 +51,5 @@ rubiksuhc.uhc.changeScenarios - Allows the player to enable and disable scenario
 CutClean - Automatically smelts Gold and Iron Ores.
 
 Quick Tools - Enchants crafted tools with Efficiency 3 and Unbreaking 1.
+
+Infinite Enchants - Gives you infinite xp levels and a hefty enchantment kit.
