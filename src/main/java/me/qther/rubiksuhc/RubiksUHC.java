@@ -26,17 +26,19 @@ import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
+import static org.apache.commons.lang.time.DurationFormatUtils.formatDuration;
+
 public final class RubiksUHC extends JavaPlugin {
 
     private static final boolean devMode = true;
 
     public static World overworld = null;
-    public static Scoreboard scoreboard;
+    public Scoreboard scoreboard;
     public static ScoreboardManager scoreboardMgr;
-    public static Objective objective;
-    public static Score sb_timeLeft;
-    public static Score sb_borderSize;
-    public static Score sb_untilPVP;
+    public Objective objective;
+    public Score sb_timeLeft;
+    public Score sb_borderSize;
+    public Score sb_untilPVP;
 
     public static String pluginPrefix = "\u00a7r\u00a76RubiksUHC \u00a7c\u00bb \u00a77";
     public static Menu mainMenu = RubiksUHC.createMenu("RubiksUHC Menu");
@@ -90,7 +92,8 @@ public final class RubiksUHC extends JavaPlugin {
         CutClean.enabled = getConfig().getBoolean("uhc.scenarios.cutClean");
         QuickTools.enabled = getConfig().getBoolean("uhc.scenarios.quickTools");
         InfiniteEnchants.enabled = getConfig().getBoolean("uhc.scenarios.infiniteEnchants");
-        VeinMiner.enabled = getConfig().getBoolean("uhc.scenarios.veinMiner");
+        //VeinMiner.enabled = getConfig().getBoolean("uhc.scenarios.veinMiner");
+        VeinMiner.enabled = false;
         getConfig().set("world.overworld.name", overworldName);
         getConfig().set("uhc.border.size", borderSize);
         getConfig().set("uhc.border.time", borderTime);
@@ -144,6 +147,7 @@ public final class RubiksUHC extends JavaPlugin {
                     handItemMeta.getEnchants().forEach((enchant, level) -> handItemMeta.removeEnchant(enchant));
                     handItem.setItemMeta(handItemMeta);
                     inventory.setItemInMainHand(handItem);
+                    player.sendMessage(pluginPrefix + "Disenchanted your held \"" + handItemMeta.getDisplayName() + "\".");
                 }
             }
             mainMenu.close(player);
@@ -213,6 +217,7 @@ public final class RubiksUHC extends JavaPlugin {
             }
         });
 
+        /*
         // Vein Miner
         ItemStack veinMinerItem = createItemStack(Material.IRON_ORE, 1, "&r&6Vein Miner", "&r&cMines entire veins upon break.", "&r&cWorks with &5Fortune!");
         scenarioMenu.getSlot(13).setItem(veinMinerItem);
@@ -231,6 +236,7 @@ public final class RubiksUHC extends JavaPlugin {
                 player.sendMessage(pluginPrefix + "Vein Miner is " + (InfiniteEnchants.enabled ? "enabled!" : "disabled!"));
             }
         });
+        */
 
         // Click Options
         ClickOptions options = ClickOptions.builder()
@@ -245,14 +251,6 @@ public final class RubiksUHC extends JavaPlugin {
 
         // Scoreboard
         scoreboardMgr = Bukkit.getServer().getScoreboardManager();
-        scoreboard = scoreboardMgr.getNewScoreboard();
-        objective = scoreboard.registerNewObjective("rubiksuhc", "dummy", "\u00a7r\u00a76\u00a7lRubiksUHC", RenderType.INTEGER);
-        objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-        sb_timeLeft = objective.getScore("\u00a7aTime Left (sec)");
-        sb_borderSize = objective.getScore("\u00a7aBorder Inradius");
-        sb_untilPVP = objective.getScore("\u00a7aUntil PVP (sec)");
-
-
 
         BukkitScheduler scheduler = getServer().getScheduler();
         scheduler.scheduleSyncRepeatingTask(this, () -> {
@@ -260,11 +258,23 @@ public final class RubiksUHC extends JavaPlugin {
                 World world = Bukkit.getWorld(overworldName);
                 WorldBorder border = world.getWorldBorder();
 
+
                 // Scoreboard
-                sb_timeLeft.setScore(ended ? 0 : (int) Math.max(0, timeStarted + borderTime * 1000 - System.currentTimeMillis()) / 1000);
-                sb_borderSize.setScore((int) border.getSize() / 2);
+                scoreboard = scoreboardMgr.getNewScoreboard();
+                objective = scoreboard.registerNewObjective("rubiksuhc", "dummy", "\u00a7r\u00a76\u00a7lRubiksUHC", RenderType.INTEGER);
+                objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+                sb_timeLeft = objective.getScore("\u00a7aTime Left \u00a7c\u00bb \u00a76" + (ended ? 0 : formatDuration(Math.max(0, timeStarted + borderTime * 1000 - System.currentTimeMillis()), "mm:ss")));
+                sb_borderSize = objective.getScore("\u00a7aBorder Inradius \u00a7c\u00bb \u00a76" + (int) border.getSize() / 2);
+                sb_timeLeft.setScore(gracePeriod > 0 ? 2 : 1);
+                sb_borderSize.setScore(gracePeriod > 0 ? 1 : 0);
                 if (!ended && gracePeriod > 0) {
-                    sb_untilPVP.setScore((int) Math.max(0, timeStarted + gracePeriod * 1000 - System.currentTimeMillis()) / 1000);
+                    if ((int) Math.max(0, timeStarted + gracePeriod * 1000 - System.currentTimeMillis()) / 1000 > 0) {
+                        sb_untilPVP = objective.getScore("\u00a7aPvP in \u00a7c\u00bb \u00a76" + formatDuration(Math.max(0, timeStarted + gracePeriod * 1000 - System.currentTimeMillis()), "mm:ss"));
+                    } else {
+                        sb_untilPVP = objective.getScore("\u00a7aPvP in \u00a7c\u00bb \u00a76Now");
+                    }
+
+                    sb_untilPVP.setScore(0);
                 }
                 Bukkit.getOnlinePlayers().forEach(online -> online.setScoreboard(scoreboard));
 

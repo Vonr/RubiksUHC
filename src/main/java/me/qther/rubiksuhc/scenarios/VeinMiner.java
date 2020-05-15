@@ -78,9 +78,6 @@ public class VeinMiner implements Listener {
                     break;
             }
 
-            ItemMeta toolMeta = tool.getItemMeta();
-            int fortune = (toolMeta == null ? 0 : toolMeta.getEnchantLevel(Enchantment.LOOT_BONUS_BLOCKS));
-
             Block block = event.getBlock();
             Material blockType = block.getType();
             Location blockLoc = block.getLocation();
@@ -88,7 +85,7 @@ public class VeinMiner implements Listener {
                 case COAL_ORE:
                 case NETHER_QUARTZ_ORE:
                     if (toolStrength >= 1) {
-                        lookForOres(blockType, blockLoc, fortune);
+                        lookForOres(blockType, blockLoc, tool);
                         event.setCancelled(true);
                     }
                     break;
@@ -97,15 +94,14 @@ public class VeinMiner implements Listener {
                 case REDSTONE_ORE:
                 case DIAMOND_ORE:
                     if (toolStrength >= 3) {
-                        lookForOres(blockType, blockLoc, fortune);
+                        lookForOres(blockType, blockLoc, tool);
                         event.setCancelled(true);
                     }
-                    ;
                     break;
                 case IRON_ORE:
                 case LAPIS_ORE:
                     if (toolStrength >= 2) {
-                        lookForOres(blockType, blockLoc, fortune);
+                        lookForOres(blockType, blockLoc, tool);
                         event.setCancelled(true);
                     }
                     break;
@@ -115,23 +111,24 @@ public class VeinMiner implements Listener {
         }
     }
 
-    public void lookForOres(Material oreType, Location blockLoc, Integer fortune) {
+    public void lookForOres(Material oreType, Location blockLoc, ItemStack tool) {
         if (!checked.contains(blockLoc)) {
             checked.add(blockLoc);
             offsets.forEach(offset -> {
-                Location toCheck = blockLoc.add(offset);
+                Location locationStore = blockLoc;
+                Location toCheck = locationStore.add(offset);
                 if (toCheck.getBlock().getType() == oreType) {
-                    mineOre(oreType, toCheck, fortune);
-                    lookForOres(oreType, toCheck, fortune);
+                    mineOre(oreType, toCheck, tool);
+                    lookForOres(oreType, toCheck, tool);
                 }
             });
         }
     }
 
-    public void mineOre(Material oreType, Location location, Integer fortuneLevel) {
+    public void mineOre(Material oreType, Location location, ItemStack tool) {
         checked.remove(location);
         Bukkit.broadcastMessage(location.toString());
-        int baseAmount = 0;
+        /*int baseAmount = 0;
         int amount = 0;
         int xp = 0;
         Material drop = Material.AIR;
@@ -193,6 +190,7 @@ public class VeinMiner implements Listener {
         if (xp > 0) {
             int finalXp = xp;
             RubiksUHC.overworld.spawn(location, ExperienceOrb.class, experienceOrb -> experienceOrb.setExperience(finalXp));
-        }
+        }*/
+        location.getBlock().breakNaturally();
     }
 }
