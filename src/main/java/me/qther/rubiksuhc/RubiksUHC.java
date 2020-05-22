@@ -1,16 +1,13 @@
 package me.qther.rubiksuhc;
 
-import me.qther.rubiksuhc.scenarios.CutClean;
-import me.qther.rubiksuhc.scenarios.InfiniteEnchants;
-import me.qther.rubiksuhc.scenarios.QuickTools;
-import me.qther.rubiksuhc.scenarios.VeinMiner;
+import me.qther.rubiksuhc.scenarios.*;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.ClickType;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -30,7 +27,7 @@ import static org.apache.commons.lang.time.DurationFormatUtils.formatDuration;
 
 public final class RubiksUHC extends JavaPlugin {
 
-    private static final boolean devMode = true;
+    private static final boolean devMode = false;
 
     public static World overworld = null;
     public Scoreboard scoreboard;
@@ -43,22 +40,24 @@ public final class RubiksUHC extends JavaPlugin {
     public static String pluginPrefix = "\u00a7r\u00a76RubiksUHC \u00a7c\u00bb \u00a77";
     public static Menu mainMenu = RubiksUHC.createMenu("RubiksUHC Menu");
     public static Menu scenarioMenu = RubiksUHC.createMenu("RubiksUHC Menu");
+    public static Menu optionsMenu = RubiksUHC.createMenu("RubiksUHC Menu");
+    public static Menu craftsMenu = RubiksUHC.createMenu("RubiksUHC Menu");
     public static boolean started = false;
     public static boolean ended = false;
     public static long timeStarted = 0;
     public static List<UUID> scattered = new ArrayList<>(Arrays.asList());
     public static List<UUID> dead = new ArrayList<>(Arrays.asList());
 
-    ItemStack cutCleanIndicatorItem;
-
     static DecimalFormat df = new DecimalFormat("#.00");
 
-    public static String overworldName;
-    public static int borderSize;
-    public static int borderTime;
-    public static int gracePeriod;
-    public static int scatterSize;
-    public static boolean lateScatter;
+    public static String opt_overworldName;
+    public static int opt_borderSize;
+    public static int opt_borderTime;
+    public static int opt_gracePeriod;
+    public static int opt_scatterSize;
+    public static boolean opt_lateScatter;
+    public static boolean opt_goldenHeads;
+    public static boolean opt_headDrops;
 
     @Override
     public void onEnable() {
@@ -78,39 +77,42 @@ public final class RubiksUHC extends JavaPlugin {
                 new CutClean(),
                 new QuickTools(),
                 new InfiniteEnchants(),
-                new VeinMiner()
+                //new VeinMiner(),
+                new DoubleHealth()
         );
         scenarios.forEach(scenario -> getServer().getPluginManager().registerEvents(scenario, this));
 
         // Config magics
-        overworldName = getConfig().getString("world.overworld.name") == null ? "world" : getConfig().getString("world.overworld.name");
-        borderSize = getConfig().getInt("uhc.border.size") == 0 ? 5000 : getConfig().getInt("uhc.border.size");
-        borderTime = getConfig().getInt("uhc.border.time");
-        gracePeriod = getConfig().getInt("uhc.game.gracePeriod");
-        scatterSize = getConfig().getInt("uhc.game.scatterSize") < 0.1 * borderSize ? borderSize - 200 : getConfig().getInt("uhc.game.scatterSize");
-        lateScatter = getConfig().getBoolean("uhc.game.lateScatter");
+        opt_overworldName = getConfig().getString("world.overworld.name") == null ? "world" : getConfig().getString("world.overworld.name");
+        opt_borderSize = getConfig().getInt("uhc.border.size") == 0 ? 5000 : getConfig().getInt("uhc.border.size");
+        opt_borderTime = getConfig().getInt("uhc.border.time");
+        opt_gracePeriod = getConfig().getInt("uhc.game.gracePeriod");
+        opt_scatterSize = getConfig().getInt("uhc.game.scatterSize") < 0.1 * opt_borderSize ? opt_borderSize - 200 : getConfig().getInt("uhc.game.opt_scatterSize");
+        opt_lateScatter = getConfig().getBoolean("uhc.game.lateScatter");
         CutClean.enabled = getConfig().getBoolean("uhc.scenarios.cutClean");
         QuickTools.enabled = getConfig().getBoolean("uhc.scenarios.quickTools");
         InfiniteEnchants.enabled = getConfig().getBoolean("uhc.scenarios.infiniteEnchants");
         //VeinMiner.enabled = getConfig().getBoolean("uhc.scenarios.veinMiner");
+        DoubleHealth.enabled = getConfig().getBoolean("uhc.scenarios.doubleHealth");
+        opt_goldenHeads = getConfig().getBoolean("uhc.crafts.goldenHeads");
+        opt_headDrops = getConfig().getBoolean("uhc.game.headDrops");
         VeinMiner.enabled = false;
-        getConfig().set("world.overworld.name", overworldName);
-        getConfig().set("uhc.border.size", borderSize);
-        getConfig().set("uhc.border.time", borderTime);
-        getConfig().set("uhc.game.gracePeriod", gracePeriod);
-        getConfig().set("uhc.game.scatterSize", scatterSize);
-        getConfig().set("uhc.game.lateScatter", lateScatter);
+        getConfig().set("world.overworld.name", opt_overworldName);
+        getConfig().set("uhc.border.size", opt_borderSize);
+        getConfig().set("uhc.border.time", opt_borderTime);
+        getConfig().set("uhc.game.gracePeriod", opt_gracePeriod);
+        getConfig().set("uhc.game.scatterSize", opt_scatterSize);
+        getConfig().set("uhc.game.lateScatter", opt_lateScatter);
         getConfig().set("uhc.scenarios.cutClean", CutClean.enabled);
         getConfig().set("uhc.scenarios.quickTools", QuickTools.enabled);
         getConfig().set("uhc.scenarios.infiniteEnchants", InfiniteEnchants.enabled);
-        getConfig().set("uhc.scenarios.veinMiner", VeinMiner.enabled);
+        //getConfig().set("uhc.scenarios.veinMiner", VeinMiner.enabled);
+        getConfig().set("uhc.scenarios.doubleHealth", DoubleHealth.enabled);
+        //getConfig().set("uhc.crafts.goldenHeads", opt_goldenHeads);
         saveConfig();
 
         // Get world
-        overworld = Bukkit.getWorld(overworldName);
-
-        // Scenario Indicators
-        cutCleanIndicatorItem = CutClean.enabled ? new ItemStack(Material.LIME_STAINED_GLASS_PANE) : new ItemStack(Material.RED_STAINED_GLASS_PANE);
+        overworld = Bukkit.getWorld(opt_overworldName);
 
         // Main Menu
         ItemStack scenarioItem = createItemStack(Material.COMMAND_BLOCK, 1, "&r&6Scenarios");
@@ -118,6 +120,16 @@ public final class RubiksUHC extends JavaPlugin {
         mainMenu.getSlot(0).setClickHandler((player, info) -> {
             displayMenu(player, scenarioMenu);
         });
+        /*ItemStack craftsItem = createItemStack(Material.CRAFTING_TABLE, 1, "&r&6Custom Crafts");
+        mainMenu.getSlot(8).setItem(scenarioItem);
+        mainMenu.getSlot(8).setClickHandler((player, info) -> {
+            displayMenu(player, craftsMenu);
+        });
+        ItemStack optionsItem = createItemStack(Material.STONECUTTER, 1, "&r&6Options");
+        mainMenu.getSlot(13).setItem(scenarioItem);
+        mainMenu.getSlot(13).setClickHandler((player, info) -> {
+            displayMenu(player, optionsMenu);
+        });*/
         ItemStack startItem = createItemStack(Material.LIME_WOOL, 1, "&r&aStart");
         mainMenu.getSlot(4).setItem(startItem);
         mainMenu.getSlot(4).setClickHandler((player, info) -> {
@@ -217,6 +229,25 @@ public final class RubiksUHC extends JavaPlugin {
             }
         });
 
+        // Double Health
+        ItemStack doubleHealthItem = createItemStack(Material.ENCHANTED_GOLDEN_APPLE, 1, "&r&6Double Health", "&r&cSpawns you with &aDouble Health &c.");
+        scenarioMenu.getSlot(13).setItem(infiniteEnchantsItem);
+        scenarioMenu.getSlot(13).setClickHandler((player, info) -> {
+            if (player.hasPermission("rubiksuhc.uhc.changeScenarios")) {
+                if (!started) {
+                    InfiniteEnchants.enabled = !InfiniteEnchants.enabled;
+                    getConfig().set("uhc.scenarios.infiniteEnchants", InfiniteEnchants.enabled);
+                    saveConfig();
+                    Bukkit.broadcastMessage(pluginPrefix + "Infinite Enchants is now " + (InfiniteEnchants.enabled ? "enabled!" : "disabled!"));
+                    displayMenu(player, scenarioMenu);
+                } else {
+                    player.sendMessage(pluginPrefix + "Infinite Enchants is " + (InfiniteEnchants.enabled ? "enabled!" : "disabled!"));
+                }
+            } else {
+                player.sendMessage(pluginPrefix + "Infinite Enchants is " + (InfiniteEnchants.enabled ? "enabled!" : "disabled!"));
+            }
+        });
+
         /*
         // Vein Miner
         ItemStack veinMinerItem = createItemStack(Material.IRON_ORE, 1, "&r&6Vein Miner", "&r&cMines entire veins upon break.", "&r&cWorks with &5Fortune!");
@@ -238,6 +269,70 @@ public final class RubiksUHC extends JavaPlugin {
         });
         */
 
+        /*// Crafts Menu
+        craftsMenu.getSlot(27).setItem(backItem);
+        craftsMenu.getSlot(27).setClickHandler((player, info) -> {
+            displayMenu(player, mainMenu);
+        });
+
+        // Golden Drops
+        ItemStack goldenHeadItem = createNewHead(1, "LegendaryJulien", "&r&6Golden Head", "&r&cHeals you on right click.");
+        craftsMenu.getSlot(10).setItem(goldenHeadItem);
+        craftsMenu.getSlot(10).setClickHandler((player, info) -> {
+            if (player.hasPermission("rubiksuhc.crafts.toggleCrafts")) {
+                if (!opt_headDrops) {
+                    player.sendMessage(pluginPrefix + "Golden Heads are " + (opt_goldenHeads ? "enabled!" : "disabled!"));
+                    return;
+                }
+                if (!started) {
+                    opt_goldenHeads = !opt_goldenHeads;
+                    getConfig().set("uhc.crafts.goldenHeads", opt_goldenHeads);
+                    saveConfig();
+                    Bukkit.broadcastMessage(pluginPrefix + "Golden Heads are now " + (opt_goldenHeads ? "enabled!" : "disabled!"));
+                    displayMenu(player, craftsMenu);
+                } else {
+                    player.sendMessage(pluginPrefix + "Golden Heads are " + (opt_goldenHeads ? "enabled!" : "disabled!"));
+                }
+                if (opt_goldenHeads) {
+                    NamespacedKey key = new NamespacedKey(this, "golden_head");
+                    ShapedRecipe recipe = new ShapedRecipe(key, goldenHeadItem);
+                    recipe.shape("GGG", "GHG", "GGG");
+                    recipe.setIngredient('G', Material.GOLD_INGOT);
+                    recipe.setIngredient('H', Material.PLAYER_HEAD);
+                    Bukkit.addRecipe(recipe);
+                } else {
+                    removeRecipe(goldenHeadItem);
+                }
+            } else {
+                player.sendMessage(pluginPrefix + "Golden Heads are " + (opt_goldenHeads ? "enabled!" : "disabled!"));
+            }
+        });
+
+        // Options Menu
+        optionsMenu.getSlot(27).setItem(backItem);
+        optionsMenu.getSlot(27).setClickHandler((player, info) -> {
+            displayMenu(player, optionsMenu);
+        });
+
+        // Player Head Drops
+        ItemStack headDropsItem = createNewHead(1, "Yearr", "&r&cPlayer Head Drops", "&r&cPlayer heads can be used to craft golden heads");
+        optionsMenu.getSlot(10).setItem(headDropsItem);
+        optionsMenu.getSlot(10).setClickHandler((player, info) -> {
+            if (player.hasPermission("rubiksuhc.game.changeOptions")) {
+                if (!started) {
+                    opt_headDrops = !opt_headDrops;
+                    getConfig().set("uhc.game.headDrops", opt_headDrops);
+                    saveConfig();
+                    Bukkit.broadcastMessage(pluginPrefix + "Head Drops are now " + (opt_headDrops ? "enabled!" : "disabled!"));
+                    displayMenu(player, craftsMenu);
+                } else {
+                    player.sendMessage(pluginPrefix + "Head Drops are " + (opt_headDrops ? "enabled!" : "disabled!"));
+                }
+            } else {
+                player.sendMessage(pluginPrefix + "Head Drops are " + (opt_headDrops ? "enabled!" : "disabled!"));
+            }
+        });*/
+
         // Click Options
         ClickOptions options = ClickOptions.builder()
                 .allow(ClickType.LEFT, ClickType.RIGHT)
@@ -245,6 +340,8 @@ public final class RubiksUHC extends JavaPlugin {
         for (int i = 0; i < 35; i++) {
             mainMenu.getSlot(i).setClickOptions(options);
             scenarioMenu.getSlot(i).setClickOptions(options);
+            //craftsMenu.getSlot(i).setClickOptions(options);
+            //optionsMenu.getSlot(i).setClickOptions(options);
         }
 
 
@@ -255,7 +352,7 @@ public final class RubiksUHC extends JavaPlugin {
         BukkitScheduler scheduler = getServer().getScheduler();
         scheduler.scheduleSyncRepeatingTask(this, () -> {
             if (started) {
-                World world = Bukkit.getWorld(overworldName);
+                World world = Bukkit.getWorld(opt_overworldName);
                 WorldBorder border = world.getWorldBorder();
 
 
@@ -263,13 +360,13 @@ public final class RubiksUHC extends JavaPlugin {
                 scoreboard = scoreboardMgr.getNewScoreboard();
                 objective = scoreboard.registerNewObjective("rubiksuhc", "dummy", "\u00a7r\u00a76\u00a7lRubiksUHC", RenderType.INTEGER);
                 objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-                sb_timeLeft = objective.getScore("\u00a7aTime Left \u00a7c\u00bb \u00a76" + (ended ? 0 : formatDuration(Math.max(0, timeStarted + borderTime * 1000 - System.currentTimeMillis()), "mm:ss")));
+                sb_timeLeft = objective.getScore("\u00a7aTime Left \u00a7c\u00bb \u00a76" + (ended ? 0 : formatDuration(Math.max(0, timeStarted + opt_borderTime * 1000 - System.currentTimeMillis()), "mm:ss")));
                 sb_borderSize = objective.getScore("\u00a7aBorder Inradius \u00a7c\u00bb \u00a76" + (int) border.getSize() / 2);
-                sb_timeLeft.setScore(gracePeriod > 0 ? 2 : 1);
-                sb_borderSize.setScore(gracePeriod > 0 ? 1 : 0);
-                if (!ended && gracePeriod > 0) {
-                    if ((int) Math.max(0, timeStarted + gracePeriod * 1000 - System.currentTimeMillis()) / 1000 > 0) {
-                        sb_untilPVP = objective.getScore("\u00a7aPvP in \u00a7c\u00bb \u00a76" + formatDuration(Math.max(0, timeStarted + gracePeriod * 1000 - System.currentTimeMillis()), "mm:ss"));
+                sb_timeLeft.setScore(opt_gracePeriod > 0 ? 2 : 1);
+                sb_borderSize.setScore(opt_gracePeriod > 0 ? 1 : 0);
+                if (!ended && opt_gracePeriod > 0) {
+                    if ((int) Math.max(0, timeStarted + opt_gracePeriod * 1000 - System.currentTimeMillis()) / 1000 > 0) {
+                        sb_untilPVP = objective.getScore("\u00a7aPvP in \u00a7c\u00bb \u00a76" + formatDuration(Math.max(0, timeStarted + opt_gracePeriod * 1000 - System.currentTimeMillis()), "mm:ss"));
                     } else {
                         sb_untilPVP = objective.getScore("\u00a7aPvP in \u00a7c\u00bb \u00a76Now");
                     }
@@ -281,12 +378,12 @@ public final class RubiksUHC extends JavaPlugin {
                 if (InfiniteEnchants.enabled) {
                     scattered.forEach(uuid -> {
                         Player player = Bukkit.getPlayer(uuid);
-                        player.setLevel(20000);
-                        player.setExp(0);
+                        Objects.requireNonNull(player).setLevel(20000);
+                        Objects.requireNonNull(player).setExp(0);
                     });
                 }
                 if (!devMode) {
-                    dead.forEach(p -> Bukkit.getPlayer(p).setGameMode(GameMode.SPECTATOR));
+                    dead.forEach(p -> Objects.requireNonNull(Bukkit.getPlayer(p)).setGameMode(GameMode.SPECTATOR));
                     if (scattered.size() - dead.size() <= 1) {
                         Player winner = Bukkit.getPlayer(scattered.stream().filter(p -> {
                             for (UUID player : dead) {
@@ -332,23 +429,23 @@ public final class RubiksUHC extends JavaPlugin {
         menu.open(player);
     }
 
-    public static void startUHC() {
+    public void startUHC() {
         overworld.setTime(6000);
         Objects.requireNonNull(overworld).getWorldBorder().setCenter(0, 0);
-        if (borderTime > 0) {
-            Objects.requireNonNull(overworld).getWorldBorder().setSize(2 * borderSize);
-            Objects.requireNonNull(overworld).getWorldBorder().setSize(0.5, borderTime);
+        if (opt_borderTime > 0) {
+            Objects.requireNonNull(overworld).getWorldBorder().setSize(2 * opt_borderSize);
+            Objects.requireNonNull(overworld).getWorldBorder().setSize(0.5, opt_borderTime);
         }
-        else Objects.requireNonNull(overworld).getWorldBorder().setSize(2 * borderSize);
+        else Objects.requireNonNull(overworld).getWorldBorder().setSize(2 * opt_borderSize);
         Objects.requireNonNull(overworld).getWorldBorder().setDamageAmount(0.2);
-        if (borderTime > 0) Bukkit.broadcastMessage(pluginPrefix + "The border has started to shrink from a size of " + borderSize * 2 + " square blocks towards x0 z0.");
-        else Bukkit.broadcastMessage(pluginPrefix + "The border has been created with a size of " + borderSize * 2 + " square blocks.");
-        if (borderTime > 0) Bukkit.broadcastMessage(pluginPrefix + "It will reach x0 z0 in " + borderTime + " seconds (" + df.format(borderTime / 60) + " minutes)");
-        if (gracePeriod > 0) Bukkit.broadcastMessage(pluginPrefix + "There is a grace (No PVP) period of " + gracePeriod + " seconds (" + df.format(gracePeriod / 60) + " minutes)");
+        if (opt_borderTime > 0) Bukkit.broadcastMessage(pluginPrefix + "The border has started to shrink from a size of " + opt_borderSize * 2 + " square blocks towards x0 z0.");
+        else Bukkit.broadcastMessage(pluginPrefix + "The border has been created with a size of " + opt_borderSize * 2 + " square blocks.");
+        if (opt_borderTime > 0) Bukkit.broadcastMessage(pluginPrefix + "It will reach x0 z0 in " + opt_borderTime + " seconds (" + df.format(opt_borderTime / 60) + " minutes)");
+        if (opt_gracePeriod > 0) Bukkit.broadcastMessage(pluginPrefix + "There is a grace (No PVP) period of " + opt_gracePeriod + " seconds (" + df.format(opt_gracePeriod / 60) + " minutes)");
         Bukkit.broadcastMessage(pluginPrefix + "Good luck, have fun!");
         timeStarted = System.currentTimeMillis();
         started = true;
-        Scatter((List<Player>) Bukkit.getOnlinePlayers(), scatterSize);
+        Scatter((List<Player>) Bukkit.getOnlinePlayers(), opt_scatterSize);
     }
 
     public static void Scatter(List<Player> players, int bounds) {
@@ -377,7 +474,7 @@ public final class RubiksUHC extends JavaPlugin {
         });
     }
 
-    public static ItemStack createItemStack(Material material, int amount, String name) {
+    public ItemStack createItemStack(Material material, int amount, String name) {
         ItemStack stack = new ItemStack(material, amount);
         ItemMeta stackMeta = stack.getItemMeta();
         stackMeta.setDisplayName(name.replaceAll("&", "\u00a7"));
@@ -385,7 +482,7 @@ public final class RubiksUHC extends JavaPlugin {
         return stack;
     }
 
-    public static ItemStack createItemStack(Material material, int amount, String name, String... lore) {
+    public ItemStack createItemStack(Material material, int amount, String name, String... lore) {
         ItemStack stack = new ItemStack(material, amount);
         ItemMeta stackMeta = stack.getItemMeta();
         stackMeta.setDisplayName(name.replaceAll("&", "\u00a7"));
@@ -398,4 +495,28 @@ public final class RubiksUHC extends JavaPlugin {
         return stack;
     }
 
+    public ItemStack createNewHead(int amount, String owner, String name, String... lore) {
+        ItemStack stack = new ItemStack(Material.PLAYER_HEAD, amount);
+        SkullMeta stackMeta = (SkullMeta) stack.getItemMeta();
+        stackMeta.setOwner(owner);
+        stackMeta.setDisplayName(name.replaceAll("&", "\u00a7"));
+        List<String> loreAsList = new ArrayList<>(Arrays.asList(lore));
+        for (int i = 0; i < loreAsList.size(); i++) {
+            loreAsList.set(i, loreAsList.get(i).replaceAll("&", "\u00a7"));
+        }
+        stackMeta.setLore(loreAsList);
+        stack.setItemMeta(stackMeta);
+        return stack;
+    }
+
+    public void removeRecipe(ItemStack result) {
+        Iterator<Recipe> iterator = getServer().recipeIterator();
+        while (iterator.hasNext()) {
+            Recipe recipe = iterator.next();
+            if (recipe.getResult() == result) {
+                iterator.remove();
+                getLogger().info("Recipe removed");
+            }
+        }
+    }
 }

@@ -117,7 +117,7 @@ public class EventListener implements Listener {
 
     @EventHandler
     public void onAttack(EntityDamageByEntityEvent event) {
-        if (!started || ended || (event.getDamager() instanceof Player && event.getEntity() instanceof Player && System.currentTimeMillis() < timeStarted + gracePeriod)) {
+        if (!started || ended || (event.getDamager() instanceof Player && event.getEntity() instanceof Player && System.currentTimeMillis() < timeStarted + opt_gracePeriod)) {
             event.setCancelled(true);
         }
     }
@@ -176,9 +176,9 @@ public class EventListener implements Listener {
             event.getPlayer().getActivePotionEffects().forEach(e -> event.getPlayer().removePotionEffect(e.getType()));
             event.getPlayer().getActivePotionEffects().clear();
             event.getPlayer().sendMessage(pluginPrefix + "You're late to the UHC, " + event.getPlayer().getName() + "!");
-            if (lateScatter) {
+            if (opt_lateScatter) {
                 Bukkit.broadcastMessage(pluginPrefix + "Late scattering " + event.getPlayer().getName() + "!");
-                Scatter(Collections.singletonList(event.getPlayer()), 4800);
+                RubiksUHC.Scatter(Collections.singletonList(event.getPlayer()), 4800);
             } else {
                 dead.add(event.getPlayer().getUniqueId());
                 Bukkit.broadcastMessage(event.getPlayer().getName() + " was late to the UHC and will be spectating the game.");
