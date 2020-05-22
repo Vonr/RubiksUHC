@@ -27,6 +27,7 @@ uhc:
     cutClean: false
     quickTools: false
     infiniteEnchants: false
+    doubleHealth: false
 ```
 world.overworld.name is the name of the folder containing your overworld data.
 
@@ -53,3 +54,5 @@ CutClean - Automatically smelts Gold and Iron Ores.
 Quick Tools - Enchants crafted tools with Efficiency 3 and Unbreaking 1.
 
 Infinite Enchants - Gives you infinite xp levels and a hefty enchantment kit.
+
+Double Health - Spawns players with 2x the normal health.
