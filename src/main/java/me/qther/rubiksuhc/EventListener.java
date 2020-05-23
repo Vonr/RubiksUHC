@@ -5,17 +5,21 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.LeavesDecayEvent;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.inventory.CraftItemEvent;
+import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.world.PortalCreateEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 
 import java.util.Collections;
@@ -28,7 +32,7 @@ import static me.qther.rubiksuhc.RubiksUHC.*;
 public class EventListener implements Listener {
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
-        if (!started) {
+        if (!RubiksUHC.devMode && !started) {
             event.getPlayer().sendMessage(pluginPrefix + "The UHC has not started!");
             event.setCancelled(true);
         }
@@ -52,7 +56,7 @@ public class EventListener implements Listener {
 
     @EventHandler
     public void onLeavesDecay(LeavesDecayEvent event) {
-        if (!started || ended) {
+        if (!RubiksUHC.devMode && (!started || ended)) {
             event.setCancelled(true);
         }
         if (!event.isCancelled()) {
@@ -62,23 +66,31 @@ public class EventListener implements Listener {
 
     @EventHandler
     public void onMobSpawn(EntitySpawnEvent event) {
-        if (!started || ended) {
+        if (!RubiksUHC.devMode && (!started || ended)) {
             event.setCancelled(true);
         }
     }
 
     @EventHandler
     public void onMobExplode(EntityExplodeEvent event) {
-        if (!started || ended) {
+        if (!RubiksUHC.devMode && (!started || ended)) {
             event.setCancelled(true);
         }
     }
 
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent event) {
-        if (!started) {
+        if (!RubiksUHC.devMode && !started) {
             event.getPlayer().sendMessage(pluginPrefix + "The UHC has not started!");
             event.setCancelled(true);
+        }
+        if (event.getItemInHand() == RubiksUHC.createNewHead(1, "LegendaryJulien", "&r&6Golden Head", "&r&cHeals you on right click.", "&aRegen 2 (0:10)", "&aAbsorption 1 (2:00)")) {
+            event.setCancelled(true);
+            event.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 200, 1, true, true));
+            event.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, 2400, 0, true, true));
+            event.getPlayer().getInventory().getItemInMainHand().setAmount(event.getPlayer().getInventory().getItemInMainHand().getAmount() - 1);
+            if (event.getPlayer().getInventory().getItemInMainHand().getAmount() == 0) event.getPlayer().getInventory().getItemInMainHand().setType(Material.AIR);
+            return;
         }
         if (event.getBlock().getType() == Material.GRINDSTONE) {
             event.getPlayer().sendMessage(pluginPrefix + "Grindstones are disabled! Use /ruhc and click the Grindstone to disenchant your item.");
@@ -88,17 +100,32 @@ public class EventListener implements Listener {
 
     @EventHandler
     public void onInteractEntity(PlayerInteractEntityEvent event) {
-        if (!started || ended) {
+        if (!RubiksUHC.devMode && (!started || ended)) {
             event.setCancelled(true);
+            return;
+        }
+        if (((Player) event.getRightClicked()).getInventory().getItemInMainHand() == RubiksUHC.createNewHead(1, "LegendaryJulien", "&r&6Golden Head", "&r&cHeals you on right click.", "&aRegen 2 (0:10)", "&aAbsorption 1 (2:00)")) {
+            event.setCancelled(true);
+            event.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 200, 1, true, true));
+            event.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, 2400, 0, true, true));
+            event.getPlayer().getInventory().getItemInMainHand().setAmount(event.getPlayer().getInventory().getItemInMainHand().getAmount() - 1);
+            if (event.getPlayer().getInventory().getItemInMainHand().getAmount() == 0) event.getPlayer().getInventory().getItemInMainHand().setType(Material.AIR);
         }
     }
 
     @EventHandler
     public void onInteractBlock(PlayerInteractEvent event) {
-        if (!started || ended) {
+        if (!RubiksUHC.devMode && (!started || ended)) {
             event.getPlayer().sendMessage(pluginPrefix + "The UHC has not started!");
             event.setCancelled(true);
             return;
+        }
+        if ((event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK) && event.getItem() != null && event.getItem().getType() == Material.PLAYER_HEAD && !event.getItem().getItemMeta().getLore().isEmpty()) {
+            event.setCancelled(true);
+            event.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 200, 1, true, true));
+            event.getPlayer().addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, 2400, 0, true, true));
+            event.getPlayer().getInventory().getItemInMainHand().setAmount(event.getPlayer().getInventory().getItemInMainHand().getAmount() - 1);
+            if (event.getPlayer().getInventory().getItemInMainHand().getAmount() == 0) event.getPlayer().getInventory().getItemInMainHand().setType(Material.AIR);
         }
         try {
             if (Objects.requireNonNull(event.getClickedBlock()).getType() == Material.GRINDSTONE) {
@@ -110,14 +137,14 @@ public class EventListener implements Listener {
 
     @EventHandler
     public void onPickUp(EntityPickupItemEvent event) {
-        if (!started) {
+        if (!RubiksUHC.devMode && !started) {
             event.setCancelled(true);
         }
     }
 
     @EventHandler
     public void onAttack(EntityDamageByEntityEvent event) {
-        if (!started || ended || (event.getDamager() instanceof Player && event.getEntity() instanceof Player && System.currentTimeMillis() < timeStarted + opt_gracePeriod)) {
+        if (!RubiksUHC.devMode && (!started || ended || (event.getDamager() instanceof Player && event.getEntity() instanceof Player && System.currentTimeMillis() < timeStarted + opt_gracePeriod))) {
             event.setCancelled(true);
         }
     }
@@ -128,7 +155,7 @@ public class EventListener implements Listener {
             event.getEntity().setVelocity(event.getEntity().getVelocity().add(new Vector(0, 0.1, 0)));
             event.setCancelled(true);
         }
-        if (!started || ended || timeStarted + 20 * 1000 > System.currentTimeMillis()) event.setCancelled(true);
+        if (!RubiksUHC.devMode && (!started || ended || timeStarted + 20 * 1000 > System.currentTimeMillis())) event.setCancelled(true);
     }
 
     @EventHandler
@@ -201,9 +228,13 @@ public class EventListener implements Listener {
 
     @EventHandler
     public void onPlayerDeath(PlayerDeathEvent event) {
-        if (started) {
-            Bukkit.getOnlinePlayers().forEach(player -> player.playSound(player.getLocation(), Sound.ENTITY_LIGHTNING_BOLT_THUNDER, SoundCategory.MASTER, 0.5f, 1f));
-            dead.add(event.getEntity().getUniqueId());
+        if (started || RubiksUHC.devMode) {
+            Player player = event.getEntity();
+            if (opt_goldenHeads) {
+                player.getWorld().dropItemNaturally(player.getLocation(), RubiksUHC.createNewHead(1, player.getUniqueId(), player.getName() + "'s Head"));
+            }
+            Bukkit.getOnlinePlayers().forEach(_player -> _player.playSound(_player.getLocation(), Sound.ENTITY_LIGHTNING_BOLT_THUNDER, SoundCategory.MASTER, 0.5f, 1f));
+            dead.add(player.getUniqueId());
         }
     }
 
@@ -212,6 +243,12 @@ public class EventListener implements Listener {
         if (event.getRecipe().getResult().getType() == Material.GRINDSTONE) {
             event.getWhoClicked().sendMessage(pluginPrefix + "Grindstones are disabled! Use /ruhc and click the Grindstone to disenchant your item.");
             event.setCancelled(true);
+            return;
+        }
+        if (hiddenRecipes.contains(event.getRecipe().getResult().getType())) {
+            event.getWhoClicked().sendMessage(pluginPrefix + "This recipe has been disabled.");
+            event.setCancelled(true);
+            return;
         }
     }
 }

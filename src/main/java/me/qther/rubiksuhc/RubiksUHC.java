@@ -27,7 +27,7 @@ import static org.apache.commons.lang.time.DurationFormatUtils.formatDuration;
 
 public final class RubiksUHC extends JavaPlugin {
 
-    private static final boolean devMode = false;
+    public static final boolean devMode = false;
 
     public static World overworld = null;
     public Scoreboard scoreboard;
@@ -57,7 +57,7 @@ public final class RubiksUHC extends JavaPlugin {
     public static int opt_scatterSize;
     public static boolean opt_lateScatter;
     public static boolean opt_goldenHeads;
-    public static boolean opt_headDrops;
+    public static List<Material> hiddenRecipes = new ArrayList<>(Arrays.asList());
 
     @Override
     public void onEnable() {
@@ -78,7 +78,8 @@ public final class RubiksUHC extends JavaPlugin {
                 new QuickTools(),
                 new InfiniteEnchants(),
                 //new VeinMiner(),
-                new DoubleHealth()
+                new DoubleHealth(),
+                new TreeCapitator()
         );
         scenarios.forEach(scenario -> getServer().getPluginManager().registerEvents(scenario, this));
 
@@ -94,8 +95,8 @@ public final class RubiksUHC extends JavaPlugin {
         InfiniteEnchants.enabled = getConfig().getBoolean("uhc.scenarios.infiniteEnchants");
         //VeinMiner.enabled = getConfig().getBoolean("uhc.scenarios.veinMiner");
         DoubleHealth.enabled = getConfig().getBoolean("uhc.scenarios.doubleHealth");
+        TreeCapitator.enabled = getConfig().getBoolean("uhc.scenarios.treeCapitator");
         opt_goldenHeads = getConfig().getBoolean("uhc.crafts.goldenHeads");
-        opt_headDrops = getConfig().getBoolean("uhc.game.headDrops");
         VeinMiner.enabled = false;
         getConfig().set("world.overworld.name", opt_overworldName);
         getConfig().set("uhc.border.size", opt_borderSize);
@@ -108,11 +109,26 @@ public final class RubiksUHC extends JavaPlugin {
         getConfig().set("uhc.scenarios.infiniteEnchants", InfiniteEnchants.enabled);
         //getConfig().set("uhc.scenarios.veinMiner", VeinMiner.enabled);
         getConfig().set("uhc.scenarios.doubleHealth", DoubleHealth.enabled);
-        //getConfig().set("uhc.crafts.goldenHeads", opt_goldenHeads);
+        getConfig().set("uhc.scenarios.treeCapitator", TreeCapitator.enabled);
+        getConfig().set("uhc.crafts.goldenHeads", opt_goldenHeads);
         saveConfig();
 
         // Get world
         overworld = Bukkit.getWorld(opt_overworldName);
+
+        // Recipes
+        NamespacedKey key1 = new NamespacedKey(this, "golden_head");
+        ItemStack goldenHeadItem = createNewHead(1, "LegendaryJulien", "&r&6Golden Head", "&r&cHeals you on right click.", "&aRegen 2 (0:10)", "&aAbsorption 1 (2:00)");
+        ShapedRecipe recipe1 = new ShapedRecipe(key1, goldenHeadItem);
+        recipe1.shape("GGG", "GHG", "GGG");
+        recipe1.setIngredient('G', Material.GOLD_INGOT);
+        recipe1.setIngredient('H', Material.PLAYER_HEAD);
+        Bukkit.addRecipe(recipe1);
+        if (opt_goldenHeads) {
+            hiddenRecipes.remove(goldenHeadItem.getType());
+        } else {
+            hiddenRecipes.add(goldenHeadItem.getType());
+        }
 
         // Main Menu
         ItemStack scenarioItem = createItemStack(Material.COMMAND_BLOCK, 1, "&r&6Scenarios");
@@ -120,13 +136,13 @@ public final class RubiksUHC extends JavaPlugin {
         mainMenu.getSlot(0).setClickHandler((player, info) -> {
             displayMenu(player, scenarioMenu);
         });
-        /*ItemStack craftsItem = createItemStack(Material.CRAFTING_TABLE, 1, "&r&6Custom Crafts");
-        mainMenu.getSlot(8).setItem(scenarioItem);
+        ItemStack craftsItem = createItemStack(Material.CRAFTING_TABLE, 1, "&r&6Custom Crafts");
+        mainMenu.getSlot(8).setItem(craftsItem);
         mainMenu.getSlot(8).setClickHandler((player, info) -> {
             displayMenu(player, craftsMenu);
         });
-        ItemStack optionsItem = createItemStack(Material.STONECUTTER, 1, "&r&6Options");
-        mainMenu.getSlot(13).setItem(scenarioItem);
+        /*ItemStack optionsItem = createItemStack(Material.STONECUTTER, 1, "&r&6Options");
+        mainMenu.getSlot(13).setItem(optionsItem);
         mainMenu.getSlot(13).setClickHandler((player, info) -> {
             displayMenu(player, optionsMenu);
         });*/
@@ -230,21 +246,40 @@ public final class RubiksUHC extends JavaPlugin {
         });
 
         // Double Health
-        ItemStack doubleHealthItem = createItemStack(Material.ENCHANTED_GOLDEN_APPLE, 1, "&r&6Double Health", "&r&cSpawns you with &aDouble Health &c.");
-        scenarioMenu.getSlot(13).setItem(infiniteEnchantsItem);
+        ItemStack doubleHealthItem = createItemStack(Material.ENCHANTED_GOLDEN_APPLE, 1, "&r&6Double Health", "&r&cSpawns you with &aDouble Health&c.");
+        scenarioMenu.getSlot(13).setItem(doubleHealthItem);
         scenarioMenu.getSlot(13).setClickHandler((player, info) -> {
             if (player.hasPermission("rubiksuhc.uhc.changeScenarios")) {
                 if (!started) {
-                    InfiniteEnchants.enabled = !InfiniteEnchants.enabled;
-                    getConfig().set("uhc.scenarios.infiniteEnchants", InfiniteEnchants.enabled);
+                    DoubleHealth.enabled = !DoubleHealth.enabled;
+                    getConfig().set("uhc.scenarios.doubleHealth", DoubleHealth.enabled);
                     saveConfig();
-                    Bukkit.broadcastMessage(pluginPrefix + "Infinite Enchants is now " + (InfiniteEnchants.enabled ? "enabled!" : "disabled!"));
+                    Bukkit.broadcastMessage(pluginPrefix + "Double Health is now " + (DoubleHealth.enabled ? "enabled!" : "disabled!"));
                     displayMenu(player, scenarioMenu);
                 } else {
-                    player.sendMessage(pluginPrefix + "Infinite Enchants is " + (InfiniteEnchants.enabled ? "enabled!" : "disabled!"));
+                    player.sendMessage(pluginPrefix + "Double Health is " + (DoubleHealth.enabled ? "enabled!" : "disabled!"));
                 }
             } else {
-                player.sendMessage(pluginPrefix + "Infinite Enchants is " + (InfiniteEnchants.enabled ? "enabled!" : "disabled!"));
+                player.sendMessage(pluginPrefix + "Double Health is " + (DoubleHealth.enabled ? "enabled!" : "disabled!"));
+            }
+        });
+
+        // TreeCapitator
+        ItemStack treeCapitatorItem = createItemStack(Material.IRON_AXE, 1, "&r&6TreeCapitator", "&r&cChops down logs directly connected vertically&c.");
+        scenarioMenu.getSlot(14).setItem(treeCapitatorItem);
+        scenarioMenu.getSlot(14).setClickHandler((player, info) -> {
+            if (player.hasPermission("rubiksuhc.uhc.changeScenarios")) {
+                if (!started) {
+                    TreeCapitator.enabled = !TreeCapitator.enabled;
+                    getConfig().set("uhc.scenarios.treeCapitator", TreeCapitator.enabled);
+                    saveConfig();
+                    Bukkit.broadcastMessage(pluginPrefix + "TreeCapitator is now " + (TreeCapitator.enabled ? "enabled!" : "disabled!"));
+                    displayMenu(player, scenarioMenu);
+                } else {
+                    player.sendMessage(pluginPrefix + "TreeCapitator is " + (TreeCapitator.enabled ? "enabled!" : "disabled!"));
+                }
+            } else {
+                player.sendMessage(pluginPrefix + "TreeCapitator is " + (TreeCapitator.enabled ? "enabled!" : "disabled!"));
             }
         });
 
@@ -269,21 +304,16 @@ public final class RubiksUHC extends JavaPlugin {
         });
         */
 
-        /*// Crafts Menu
+        // Crafts Menu
         craftsMenu.getSlot(27).setItem(backItem);
         craftsMenu.getSlot(27).setClickHandler((player, info) -> {
             displayMenu(player, mainMenu);
         });
 
-        // Golden Drops
-        ItemStack goldenHeadItem = createNewHead(1, "LegendaryJulien", "&r&6Golden Head", "&r&cHeals you on right click.");
+        // Golden Heads
         craftsMenu.getSlot(10).setItem(goldenHeadItem);
         craftsMenu.getSlot(10).setClickHandler((player, info) -> {
             if (player.hasPermission("rubiksuhc.crafts.toggleCrafts")) {
-                if (!opt_headDrops) {
-                    player.sendMessage(pluginPrefix + "Golden Heads are " + (opt_goldenHeads ? "enabled!" : "disabled!"));
-                    return;
-                }
                 if (!started) {
                     opt_goldenHeads = !opt_goldenHeads;
                     getConfig().set("uhc.crafts.goldenHeads", opt_goldenHeads);
@@ -294,14 +324,9 @@ public final class RubiksUHC extends JavaPlugin {
                     player.sendMessage(pluginPrefix + "Golden Heads are " + (opt_goldenHeads ? "enabled!" : "disabled!"));
                 }
                 if (opt_goldenHeads) {
-                    NamespacedKey key = new NamespacedKey(this, "golden_head");
-                    ShapedRecipe recipe = new ShapedRecipe(key, goldenHeadItem);
-                    recipe.shape("GGG", "GHG", "GGG");
-                    recipe.setIngredient('G', Material.GOLD_INGOT);
-                    recipe.setIngredient('H', Material.PLAYER_HEAD);
-                    Bukkit.addRecipe(recipe);
+                    hiddenRecipes.remove(goldenHeadItem.getType());
                 } else {
-                    removeRecipe(goldenHeadItem);
+                    hiddenRecipes.add(goldenHeadItem.getType());
                 }
             } else {
                 player.sendMessage(pluginPrefix + "Golden Heads are " + (opt_goldenHeads ? "enabled!" : "disabled!"));
@@ -314,25 +339,6 @@ public final class RubiksUHC extends JavaPlugin {
             displayMenu(player, optionsMenu);
         });
 
-        // Player Head Drops
-        ItemStack headDropsItem = createNewHead(1, "Yearr", "&r&cPlayer Head Drops", "&r&cPlayer heads can be used to craft golden heads");
-        optionsMenu.getSlot(10).setItem(headDropsItem);
-        optionsMenu.getSlot(10).setClickHandler((player, info) -> {
-            if (player.hasPermission("rubiksuhc.game.changeOptions")) {
-                if (!started) {
-                    opt_headDrops = !opt_headDrops;
-                    getConfig().set("uhc.game.headDrops", opt_headDrops);
-                    saveConfig();
-                    Bukkit.broadcastMessage(pluginPrefix + "Head Drops are now " + (opt_headDrops ? "enabled!" : "disabled!"));
-                    displayMenu(player, craftsMenu);
-                } else {
-                    player.sendMessage(pluginPrefix + "Head Drops are " + (opt_headDrops ? "enabled!" : "disabled!"));
-                }
-            } else {
-                player.sendMessage(pluginPrefix + "Head Drops are " + (opt_headDrops ? "enabled!" : "disabled!"));
-            }
-        });*/
-
         // Click Options
         ClickOptions options = ClickOptions.builder()
                 .allow(ClickType.LEFT, ClickType.RIGHT)
@@ -340,7 +346,7 @@ public final class RubiksUHC extends JavaPlugin {
         for (int i = 0; i < 35; i++) {
             mainMenu.getSlot(i).setClickOptions(options);
             scenarioMenu.getSlot(i).setClickOptions(options);
-            //craftsMenu.getSlot(i).setClickOptions(options);
+            craftsMenu.getSlot(i).setClickOptions(options);
             //optionsMenu.getSlot(i).setClickOptions(options);
         }
 
@@ -456,6 +462,7 @@ public final class RubiksUHC extends JavaPlugin {
             player.setSaturation(20);
             player.teleport(new Location(player.getWorld(), ThreadLocalRandom.current().nextInt(-bounds, bounds + 1), 300, ThreadLocalRandom.current().nextInt(-bounds, bounds + 1)));
             player.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 20 * 30,50));
+            player.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 20 * 30,50));
             if (started && !scattered.contains(player.getUniqueId())) scattered.add(player.getUniqueId());
 
             // Infinite Enchants
@@ -495,11 +502,25 @@ public final class RubiksUHC extends JavaPlugin {
         return stack;
     }
 
-    public ItemStack createNewHead(int amount, String owner, String name, String... lore) {
+    public static ItemStack createNewHead(int amount, String owner, String name, String... lore) {
         ItemStack stack = new ItemStack(Material.PLAYER_HEAD, amount);
         SkullMeta stackMeta = (SkullMeta) stack.getItemMeta();
         stackMeta.setOwner(owner);
-        stackMeta.setDisplayName(name.replaceAll("&", "\u00a7"));
+        stackMeta.setDisplayName("\u00a7r" + name.replaceAll("&", "\u00a7"));
+        List<String> loreAsList = new ArrayList<>(Arrays.asList(lore));
+        for (int i = 0; i < loreAsList.size(); i++) {
+            loreAsList.set(i, loreAsList.get(i).replaceAll("&", "\u00a7"));
+        }
+        stackMeta.setLore(loreAsList);
+        stack.setItemMeta(stackMeta);
+        return stack;
+    }
+
+    public static ItemStack createNewHead(int amount, UUID owner, String name, String... lore) {
+        ItemStack stack = new ItemStack(Material.PLAYER_HEAD, amount);
+        SkullMeta stackMeta = (SkullMeta) stack.getItemMeta();
+        stackMeta.setOwningPlayer(Bukkit.getOfflinePlayer(owner));
+        stackMeta.setDisplayName("\u00a7r" + name.replaceAll("&", "\u00a7"));
         List<String> loreAsList = new ArrayList<>(Arrays.asList(lore));
         for (int i = 0; i < loreAsList.size(); i++) {
             loreAsList.set(i, loreAsList.get(i).replaceAll("&", "\u00a7"));
@@ -514,6 +535,17 @@ public final class RubiksUHC extends JavaPlugin {
         while (iterator.hasNext()) {
             Recipe recipe = iterator.next();
             if (recipe.getResult() == result) {
+                iterator.remove();
+                getLogger().info("Recipe removed");
+            }
+        }
+    }
+
+    public void removeRecipeByMaterial(Material material) {
+        Iterator<Recipe> iterator = getServer().recipeIterator();
+        while (iterator.hasNext()) {
+            Recipe recipe = iterator.next();
+            if (recipe.getResult().getType() == material) {
                 iterator.remove();
                 getLogger().info("Recipe removed");
             }

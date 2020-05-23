@@ -28,6 +28,7 @@ uhc:
     quickTools: false
     infiniteEnchants: false
     doubleHealth: false
+    treeCapitator: false
 ```
 world.overworld.name is the name of the folder containing your overworld data.
 
@@ -56,3 +57,5 @@ Quick Tools - Enchants crafted tools with Efficiency 3 and Unbreaking 1.
 Infinite Enchants - Gives you infinite xp levels and a hefty enchantment kit.
 
 Double Health - Spawns players with 2x the normal health.
+
+TreeCapitator - Chops down logs directly connected vertically

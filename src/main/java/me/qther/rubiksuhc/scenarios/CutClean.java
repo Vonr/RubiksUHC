@@ -2,6 +2,7 @@ package me.qther.rubiksuhc.scenarios;
 
 import me.qther.rubiksuhc.RubiksUHC;
 import org.bukkit.Material;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.ExperienceOrb;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -24,11 +25,14 @@ public class CutClean implements Listener {
                 event.getBlock().setType(Material.AIR);
                 event.setCancelled(true);
                 ItemStack item = event.getPlayer().getInventory().getItemInMainHand();
-                Damageable damageable = (Damageable) item.getItemMeta();
-                damageable.setDamage(damageable.getDamage() + 1);
-                item.setItemMeta((ItemMeta) damageable);
-                if (damageable.getDamage() > item.getType().getMaxDurability()) {
-                    event.getPlayer().getInventory().setItemInMainHand(new ItemStack(Material.AIR));
+                ItemMeta meta = item.getItemMeta();
+                if (meta != null && ThreadLocalRandom.current().nextInt(1,100 + 1) < 100 / (meta.getEnchantLevel(Enchantment.DURABILITY) + 1)) {
+                    Damageable damageable = (Damageable) item.getItemMeta();
+                    damageable.setDamage(damageable.getDamage() + 1);
+                    item.setItemMeta((ItemMeta) damageable);
+                    if (damageable.getDamage() > item.getType().getMaxDurability()) {
+                        event.getPlayer().getInventory().setItemInMainHand(new ItemStack(Material.AIR));
+                    }
                 }
                 //event.getPlayer().giveExp(1);
                 RubiksUHC.overworld.spawn(event.getBlock().getLocation().add(0.5, 0, 0.5), ExperienceOrb.class, experienceOrb -> experienceOrb.setExperience(1));
@@ -41,11 +45,14 @@ public class CutClean implements Listener {
                 event.getBlock().setType(Material.AIR);
                 event.setCancelled(true);
                 ItemStack item = event.getPlayer().getInventory().getItemInMainHand();
-                Damageable damageable = (Damageable) item.getItemMeta();
-                damageable.setDamage(damageable.getDamage() + 1);
-                item.setItemMeta((ItemMeta) damageable);
-                if (damageable.getDamage() > item.getType().getMaxDurability()) {
-                    event.getPlayer().getInventory().setItemInMainHand(new ItemStack(Material.AIR));
+                ItemMeta meta = item.getItemMeta();
+                if (meta != null && ThreadLocalRandom.current().nextInt(1,100 + 1) < 100 / (meta.getEnchantLevel(Enchantment.DURABILITY) + 1)) {
+                    Damageable damageable = (Damageable) item.getItemMeta();
+                    damageable.setDamage(damageable.getDamage() + 1);
+                    item.setItemMeta((ItemMeta) damageable);
+                    if (damageable.getDamage() > item.getType().getMaxDurability()) {
+                        event.getPlayer().getInventory().setItemInMainHand(new ItemStack(Material.AIR));
+                    }
                 }
                 //event.getPlayer().giveExp(ThreadLocalRandom.current().nextInt(0, 10) + 1 <= 7 ? 1 : 0);
                 if (ThreadLocalRandom.current().nextInt(1, 10 + 1) <= 7) RubiksUHC.overworld.spawn(event.getBlock().getLocation().add(0.5, 0, 0.5), ExperienceOrb.class, experienceOrb -> experienceOrb.setExperience(1));
