@@ -20,14 +20,14 @@ import org.ipvp.canvas.type.ChestMenu;
 
 import java.text.DecimalFormat;
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 import static org.apache.commons.lang.time.DurationFormatUtils.formatDuration;
 
 public final class RubiksUHC extends JavaPlugin {
 
-    public static final boolean devMode = false;
+    public static final boolean devMode = true;
 
     public static World overworld = null;
     public Scoreboard scoreboard;
@@ -36,6 +36,7 @@ public final class RubiksUHC extends JavaPlugin {
     public Score sb_timeLeft;
     public Score sb_borderSize;
     public Score sb_untilPVP;
+    public Score sb_untilFinalHeal;
 
     public static String pluginPrefix = "\u00a7r\u00a76RubiksUHC \u00a7c\u00bb \u00a77";
     public static Menu mainMenu = RubiksUHC.createMenu("RubiksUHC Menu");
@@ -55,6 +56,7 @@ public final class RubiksUHC extends JavaPlugin {
     public static int opt_borderTime;
     public static int opt_gracePeriod;
     public static int opt_scatterSize;
+    public static int opt_finalHeal;
     public static boolean opt_lateScatter;
     public static boolean opt_goldenHeads;
     public static List<Material> hiddenRecipes = new ArrayList<>(Arrays.asList());
@@ -90,6 +92,7 @@ public final class RubiksUHC extends JavaPlugin {
         opt_gracePeriod = getConfig().getInt("uhc.game.gracePeriod");
         opt_scatterSize = getConfig().getInt("uhc.game.scatterSize") < 0.1 * opt_borderSize ? opt_borderSize - 200 : getConfig().getInt("uhc.game.opt_scatterSize");
         opt_lateScatter = getConfig().getBoolean("uhc.game.lateScatter");
+        opt_finalHeal = getConfig().getInt("uhc.game.finalHeal");
         CutClean.enabled = getConfig().getBoolean("uhc.scenarios.cutClean");
         QuickTools.enabled = getConfig().getBoolean("uhc.scenarios.quickTools");
         InfiniteEnchants.enabled = getConfig().getBoolean("uhc.scenarios.infiniteEnchants");
@@ -104,6 +107,7 @@ public final class RubiksUHC extends JavaPlugin {
         getConfig().set("uhc.game.gracePeriod", opt_gracePeriod);
         getConfig().set("uhc.game.scatterSize", opt_scatterSize);
         getConfig().set("uhc.game.lateScatter", opt_lateScatter);
+        getConfig().set("uhc.game.finalHeal", opt_finalHeal);
         getConfig().set("uhc.scenarios.cutClean", CutClean.enabled);
         getConfig().set("uhc.scenarios.quickTools", QuickTools.enabled);
         getConfig().set("uhc.scenarios.infiniteEnchants", InfiniteEnchants.enabled);
@@ -368,8 +372,8 @@ public final class RubiksUHC extends JavaPlugin {
                 objective.setDisplaySlot(DisplaySlot.SIDEBAR);
                 sb_timeLeft = objective.getScore("\u00a7aTime Left \u00a7c\u00bb \u00a76" + (ended ? 0 : formatDuration(Math.max(0, timeStarted + opt_borderTime * 1000 - System.currentTimeMillis()), "mm:ss")));
                 sb_borderSize = objective.getScore("\u00a7aBorder Inradius \u00a7c\u00bb \u00a76" + (int) border.getSize() / 2);
-                sb_timeLeft.setScore(opt_gracePeriod > 0 ? 2 : 1);
-                sb_borderSize.setScore(opt_gracePeriod > 0 ? 1 : 0);
+                sb_timeLeft.setScore(opt_gracePeriod > 0 ? 4 : 3);
+                sb_borderSize.setScore(opt_gracePeriod > 0 ? 3 : 2);
                 if (!ended && opt_gracePeriod > 0) {
                     if ((int) Math.max(0, timeStarted + opt_gracePeriod * 1000 - System.currentTimeMillis()) / 1000 > 0) {
                         sb_untilPVP = objective.getScore("\u00a7aPvP in \u00a7c\u00bb \u00a76" + formatDuration(Math.max(0, timeStarted + opt_gracePeriod * 1000 - System.currentTimeMillis()), "mm:ss"));
@@ -377,7 +381,16 @@ public final class RubiksUHC extends JavaPlugin {
                         sb_untilPVP = objective.getScore("\u00a7aPvP in \u00a7c\u00bb \u00a76Now");
                     }
 
-                    sb_untilPVP.setScore(0);
+                    sb_untilPVP.setScore(2);
+                }
+                if (!ended && opt_finalHeal > 0) {
+                    if ((int) Math.max(0, timeStarted + opt_finalHeal * 1000 - System.currentTimeMillis()) / 1000 > 0) {
+                        sb_untilFinalHeal = objective.getScore("\u00a7aFinal Heal in \u00a7c\u00bb \u00a76" + formatDuration(Math.max(0, timeStarted + opt_finalHeal * 1000 - System.currentTimeMillis()), "mm:ss"));
+                    } else {
+                        sb_untilFinalHeal = objective.getScore("\u00a7aFinal Heal in \u00a7c\u00bb \u00a76Over");
+                    }
+
+                    sb_untilFinalHeal.setScore(1);
                 }
                 Bukkit.getOnlinePlayers().forEach(online -> online.setScoreboard(scoreboard));
 
@@ -399,7 +412,7 @@ public final class RubiksUHC extends JavaPlugin {
                             }
                             return true;
                         }).collect(Collectors.toList()).get(0));
-                        if (!winner.isOnline()) {
+                        if (!Objects.requireNonNull(winner).isOnline()) {
                             winner = Bukkit.getPlayer(dead.get(dead.size() - 1));
                         }
                         if (!ended) {
@@ -436,6 +449,18 @@ public final class RubiksUHC extends JavaPlugin {
     }
 
     public void startUHC() {
+        final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+        ScheduledFuture<?> finalHeal = scheduler.schedule(() -> {
+            scattered.forEach(p -> {
+                if (Bukkit.getPlayer(p) != null) {
+                    if (DoubleHealth.enabled) {
+                        Objects.requireNonNull(Bukkit.getPlayer(p)).setHealth(40.0);
+                    } else {
+                        Objects.requireNonNull(Bukkit.getPlayer(p)).setHealth(20.0);
+                    }
+                }
+            });
+        }, opt_finalHeal, TimeUnit.SECONDS);
         overworld.setTime(6000);
         Objects.requireNonNull(overworld).getWorldBorder().setCenter(0, 0);
         if (opt_borderTime > 0) {
@@ -464,8 +489,8 @@ public final class RubiksUHC extends JavaPlugin {
             player.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 20 * 30,50));
             player.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 20 * 30,50));
             if (opt_gracePeriod > 0 ) {
-                player.addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, (int) (opt_gracePeriod * 20 - (System.currentTimeMillis() - timeStarted / 1000 * 20)), 3));
-                player.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, (int) (opt_gracePeriod * 20 - (System.currentTimeMillis() - timeStarted / 1000 * 20)), 3));
+                player.addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, (int) (opt_gracePeriod * 20 - (System.currentTimeMillis() - timeStarted) / 1000 * 20), 3));
+                player.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, (int) (opt_gracePeriod * 20 - (System.currentTimeMillis() - timeStarted) / 1000 * 20), 3));
             }
             if (started && !scattered.contains(player.getUniqueId())) scattered.add(player.getUniqueId());
 

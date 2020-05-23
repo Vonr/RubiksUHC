@@ -23,12 +23,15 @@ uhc:
     gracePeriod: 0
     scatterSize: 4800
     lateScatter: false
+    finalHeal: 0
   scenarios:
     cutClean: false
     quickTools: false
     infiniteEnchants: false
     doubleHealth: false
     treeCapitator: false
+  crafts:
+    goldenHeads: false
 ```
 world.overworld.name is the name of the folder containing your overworld data.
 
@@ -42,11 +45,15 @@ uhc.game.lateScatter controls whether players late to the game by 3 minutes maxi
 
 uhc.game.scenarios stores boolean values for each scenario controlling whether they are enabled. These can be changed in game.
 
+uhc.game.crafts stores boolean values for each custom craft controlling whether they are enabled. These can be changed in game.
+
 ### Permissions
 
 rubiksuhc.uhc.start - Allows the player to start the UHC Game.
 
 rubiksuhc.uhc.changeScenarios - Allows the player to enable and disable scenarios.
+
+rubiksuhc.crafts.toggleCrafts - Allows the player to enable and disable crafts.
 
 ### Scenarios
 
