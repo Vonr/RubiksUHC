@@ -449,18 +449,20 @@ public final class RubiksUHC extends JavaPlugin {
     }
 
     public void startUHC() {
-        final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-        ScheduledFuture<?> finalHeal = scheduler.schedule(() -> {
-            scattered.forEach(p -> {
-                if (Bukkit.getPlayer(p) != null) {
-                    if (DoubleHealth.enabled) {
-                        Objects.requireNonNull(Bukkit.getPlayer(p)).setHealth(40.0);
-                    } else {
-                        Objects.requireNonNull(Bukkit.getPlayer(p)).setHealth(20.0);
+        if (opt_finalHeal > 0) {
+            final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+            ScheduledFuture<?> finalHeal = scheduler.schedule(() -> {
+                scattered.forEach(p -> {
+                    if (Bukkit.getPlayer(p) != null) {
+                        if (DoubleHealth.enabled) {
+                            Objects.requireNonNull(Bukkit.getPlayer(p)).setHealth(40.0);
+                        } else {
+                            Objects.requireNonNull(Bukkit.getPlayer(p)).setHealth(20.0);
+                        }
                     }
-                }
-            });
-        }, opt_finalHeal, TimeUnit.SECONDS);
+                });
+            }, opt_finalHeal, TimeUnit.SECONDS);
+        }
         overworld.setTime(6000);
         Objects.requireNonNull(overworld).getWorldBorder().setCenter(0, 0);
         if (opt_borderTime > 0) {

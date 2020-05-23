@@ -41,11 +41,15 @@ uhc.border.time is the time taken in seconds for the border to shrink to x0 z0. 
 
 uhc.game.gracePeriod is the time in seconds of the grace period if less than or equal to 0, there will be no grace period.
 
+uhc.game.scatterSize controls whether how far players get scattered.
+
 uhc.game.lateScatter controls whether players late to the game by 3 minutes maximum can join the game as a player. If set to false, they will join as spectators.
 
-uhc.game.scenarios stores boolean values for each scenario controlling whether they are enabled. These can be changed in game.
+uhc.game.finalHeal is the time in seconds until the final heal if less than or equal to 0, there will be no final heal.
 
-uhc.game.crafts stores boolean values for each custom craft controlling whether they are enabled. These can be changed in game.
+uhc.scenarios stores boolean values for each scenario controlling whether they are enabled. These can be changed in game.
+
+uhc.crafts stores boolean values for each custom craft controlling whether they are enabled. These can be changed in game.
 
 ### Permissions
 
