@@ -463,8 +463,10 @@ public final class RubiksUHC extends JavaPlugin {
             player.teleport(new Location(player.getWorld(), ThreadLocalRandom.current().nextInt(-bounds, bounds + 1), 300, ThreadLocalRandom.current().nextInt(-bounds, bounds + 1)));
             player.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 20 * 30,50));
             player.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 20 * 30,50));
-            player.addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, (int) (opt_gracePeriod * 20 - (System.currentTimeMillis() - timeStarted / 1000 * 20)),3));
-            player.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, (int) (opt_gracePeriod * 20 - (System.currentTimeMillis() - timeStarted / 1000 * 20)),3));
+            if (opt_gracePeriod > 0 ) {
+                player.addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, (int) (opt_gracePeriod * 20 - (System.currentTimeMillis() - timeStarted / 1000 * 20)), 3));
+                player.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, (int) (opt_gracePeriod * 20 - (System.currentTimeMillis() - timeStarted / 1000 * 20)), 3));
+            }
             if (started && !scattered.contains(player.getUniqueId())) scattered.add(player.getUniqueId());
 
             // Infinite Enchants
