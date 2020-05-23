@@ -6,7 +6,7 @@
 
     <groupId>me.qther.rubiksuhc</groupId>
     <artifactId>RubiksUHC</artifactId>
-    <version>1.0.2-release</version>
+    <version>1.0.3-beta.0</version>
     <packaging>jar</packaging>
 
     <name>RubiksUHC</name>

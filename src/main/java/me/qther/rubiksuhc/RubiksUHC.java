@@ -463,6 +463,8 @@ public final class RubiksUHC extends JavaPlugin {
             player.teleport(new Location(player.getWorld(), ThreadLocalRandom.current().nextInt(-bounds, bounds + 1), 300, ThreadLocalRandom.current().nextInt(-bounds, bounds + 1)));
             player.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 20 * 30,50));
             player.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 20 * 30,50));
+            player.addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, (int) (opt_gracePeriod * 20 - (System.currentTimeMillis() - timeStarted / 1000 * 20)),3));
+            player.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, (int) (opt_gracePeriod * 20 - (System.currentTimeMillis() - timeStarted / 1000 * 20)),3));
             if (started && !scattered.contains(player.getUniqueId())) scattered.add(player.getUniqueId());
 
             // Infinite Enchants
@@ -528,27 +530,5 @@ public final class RubiksUHC extends JavaPlugin {
         stackMeta.setLore(loreAsList);
         stack.setItemMeta(stackMeta);
         return stack;
-    }
-
-    public void removeRecipe(ItemStack result) {
-        Iterator<Recipe> iterator = getServer().recipeIterator();
-        while (iterator.hasNext()) {
-            Recipe recipe = iterator.next();
-            if (recipe.getResult() == result) {
-                iterator.remove();
-                getLogger().info("Recipe removed");
-            }
-        }
-    }
-
-    public void removeRecipeByMaterial(Material material) {
-        Iterator<Recipe> iterator = getServer().recipeIterator();
-        while (iterator.hasNext()) {
-            Recipe recipe = iterator.next();
-            if (recipe.getResult().getType() == material) {
-                iterator.remove();
-                getLogger().info("Recipe removed");
-            }
-        }
     }
 }
